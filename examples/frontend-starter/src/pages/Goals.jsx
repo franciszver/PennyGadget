@@ -399,6 +399,20 @@ function Goals() {
                     Target: {new Date(goal.target_completion_date).toLocaleDateString()}
                   </span>
                 )}
+                {goal.question_count !== undefined && goal.question_limit !== undefined && (
+                  <span style={{
+                    padding: '0.375rem 0.75rem',
+                    borderRadius: '4px',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    color: goal.question_count >= goal.question_limit ? 'var(--accent-color)' : goal.question_count >= goal.question_limit * 0.8 ? 'var(--warning-color)' : 'var(--text-secondary)',
+                    backgroundColor: goal.question_count >= goal.question_limit ? '#FFEBEE' : goal.question_count >= goal.question_limit * 0.8 ? 'var(--bg-accent)' : 'transparent',
+                    border: goal.question_count >= goal.question_limit ? '1px solid var(--accent-color)' : goal.question_count >= goal.question_limit * 0.8 ? '1px solid var(--warning-color)' : '1px solid var(--border-color)',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    Daily Cap: {goal.question_count}/{goal.question_limit} used
+                  </span>
+                )}
               </div>
               {goal.completion_percentage !== undefined && (
                 <div className="goal-progress" style={{ marginBottom: '0.75rem' }}>

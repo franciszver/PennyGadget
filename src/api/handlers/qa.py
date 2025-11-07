@@ -12,6 +12,7 @@ from src.config.database import get_db
 from src.api.middleware.auth import get_current_user_optional
 from src.models.qa import QAInteraction
 from src.models.user import User
+from src.models.goal import Goal
 from src.services.ai.openai_client import openai_client
 from src.services.ai.prompts import PromptTemplates
 from src.services.ai.confidence import calculate_confidence
@@ -42,6 +43,37 @@ async def submit_query(
     student = db.query(User).filter(User.id == request.student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Validate goal_id if provided and check question limit
+    goal_id_uuid = None
+    if request.goal_id:
+        try:
+            goal_id_uuid = uuid.UUID(request.goal_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid goal_id format")
+        
+        # Verify goal exists and belongs to the student
+        goal = db.query(Goal).filter(
+            Goal.id == goal_id_uuid,
+            Goal.student_id == request.student_id
+        ).first()
+        if not goal:
+            raise HTTPException(status_code=404, detail="Goal not found or does not belong to student")
+        
+        # Check question limit: 20 questions per user per goal per day
+        # Count only questions from today (UTC)
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        question_count = db.query(QAInteraction).filter(
+            QAInteraction.student_id == request.student_id,
+            QAInteraction.goal_id == goal_id_uuid,
+            QAInteraction.created_at >= today_start
+        ).count()
+        
+        if question_count >= 20:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Daily question limit reached. You have reached the maximum of 20 questions for this goal today. The limit will reset tomorrow. Please contact your tutor for additional assistance."
+            )
     
     # Check if disclaimer has been shown
     disclaimer_shown = student.disclaimer_shown
@@ -178,6 +210,7 @@ async def submit_query(
     interaction = QAInteraction(
         id=uuid.uuid4(),
         student_id=uuid.UUID(request.student_id),
+        goal_id=goal_id_uuid,
         query=request.query,
         answer=answer,
         confidence=confidence_result["confidence"],

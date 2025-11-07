@@ -15,6 +15,7 @@ class QAInteraction(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     student_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    goal_id = Column(UUID(as_uuid=True), ForeignKey("goals.id", ondelete="SET NULL"), nullable=True, index=True)
     
     query = Column(Text, nullable=False)
     answer = Column(Text, nullable=False)
@@ -37,6 +38,7 @@ class QAInteraction(Base):
     # Relationships
     student = relationship("User", foreign_keys=[student_id], backref="qa_interactions")
     escalated_tutor = relationship("User", foreign_keys=[escalated_to_tutor_id])
+    goal = relationship("Goal", foreign_keys=[goal_id], backref="qa_interactions")
     
     def __repr__(self):
         return f"<QAInteraction(id={self.id}, confidence={self.confidence}, escalation={self.tutor_escalation_suggested})>"

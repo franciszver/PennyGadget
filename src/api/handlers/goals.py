@@ -17,6 +17,7 @@ from src.models.goal import Goal
 from src.models.user import User
 from src.models.subject import Subject
 from src.models.practice import PracticeAssignment, StudentRating
+from src.models.qa import QAInteraction
 from src.config.settings import settings
 from src.services.practice.adaptive import AdaptivePracticeService
 import uuid
@@ -110,6 +111,17 @@ async def get_goals(
         else:
             goal_data["elo_rating"] = None
             goal_data["elo_rating_updated"] = None
+        
+        # Get question count for this goal (for daily cap display)
+        # Count only questions from today (UTC)
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        question_count = db.query(QAInteraction).filter(
+            QAInteraction.student_id == UUID(student_id),
+            QAInteraction.goal_id == g.id,
+            QAInteraction.created_at >= today_start
+        ).count()
+        goal_data["question_count"] = question_count
+        goal_data["question_limit"] = 20
         
         goals_with_ratings.append(goal_data)
     
