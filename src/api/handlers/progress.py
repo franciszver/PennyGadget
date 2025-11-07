@@ -21,14 +21,24 @@ def _get_related_subjects(subject_name: str, goal_type: Optional[str] = None) ->
     """Get related subject suggestions based on completed goal"""
     subject_lower = subject_name.lower()
     
-    # Subject-based suggestions
-    if any(kw in subject_lower for kw in ['sat', 'test prep']):
+    # SAT-specific suggestions (when goal_type is SAT and goal is completed)
+    if goal_type and goal_type.upper() == "SAT":
         if 'math' in subject_lower:
-            return ["SAT English", "AP Calculus", "AP Statistics"]
+            return ["College Essays", "Study Skills", "AP Prep"]
         elif 'english' in subject_lower or 'essay' in subject_lower:
             return ["SAT Math", "AP English Literature", "AP Language"]
         else:
-            return ["SAT Math", "SAT English", "AP Prep"]
+            # General SAT completion
+            return ["College Essays", "Study Skills", "AP Prep"]
+    
+    # Subject-based suggestions
+    if any(kw in subject_lower for kw in ['sat', 'test prep']):
+        if 'math' in subject_lower:
+            return ["College Essays", "Study Skills", "AP Prep"]
+        elif 'english' in subject_lower or 'essay' in subject_lower:
+            return ["SAT Math", "AP English Literature", "AP Language"]
+        else:
+            return ["College Essays", "Study Skills", "AP Prep"]
     
     elif 'algebra' in subject_lower:
         return ["Geometry", "Pre-Calculus", "AP Calculus"]
@@ -38,7 +48,8 @@ def _get_related_subjects(subject_name: str, goal_type: Optional[str] = None) ->
         return ["AP Statistics", "Physics", "Advanced Math"]
     
     elif 'chemistry' in subject_lower:
-        return ["Physics", "Biology", "AP Chemistry"]
+        # Enhanced Chemistry suggestions
+        return ["Physics", "Biology", "AP Chemistry", "STEM Prep"]
     elif 'physics' in subject_lower:
         return ["Chemistry", "AP Physics", "Calculus"]
     elif 'biology' in subject_lower:

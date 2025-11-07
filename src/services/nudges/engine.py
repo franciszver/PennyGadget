@@ -94,9 +94,13 @@ class NudgeEngine:
                 insights=insights
             )
             
-            # Add default suggestions if needed
+            # Ensure "book next session" is always included
+            book_session_suggestion = "Schedule your next tutoring session"
             if not suggestions:
-                suggestions = ["Schedule your next tutoring session", "Try some practice problems", "Set up study goals"]
+                suggestions = [book_session_suggestion, "Try some practice problems", "Set up study goals"]
+            elif book_session_suggestion not in suggestions:
+                # Add it as the first suggestion
+                suggestions = [book_session_suggestion] + suggestions
             
             message += "\n\nWould you like to:\n" + "\n".join(f"- {s}" for s in suggestions[:3])
             
