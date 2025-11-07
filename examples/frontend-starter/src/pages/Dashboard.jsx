@@ -10,21 +10,45 @@ function Dashboard() {
 
   const { data: progress, isLoading: progressLoading, error: progressError } = useQuery({
     queryKey: ['progress', user?.id],
-    queryFn: () => api.getProgress(user.id).then(res => res.data),
+    queryFn: () => {
+      console.log('[DASHBOARD] Fetching progress for user:', user.id);
+      return api.getProgress(user.id).then(res => {
+        console.log('[DASHBOARD] Progress response:', res.data);
+        return res.data;
+      });
+    },
     enabled: !!user?.id,
     retry: false, // Don't retry on error in development
     onError: (error) => {
-      console.log('[DASHBOARD] Progress API error (expected in dev with mock auth):', error);
+      console.error('[DASHBOARD] Progress API error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+        userId: user?.id
+      });
     }
   });
 
   const { data: gamification, isLoading: gamificationLoading, error: gamificationError } = useQuery({
     queryKey: ['gamification', user?.id],
-    queryFn: () => api.getGamification(user.id).then(res => res.data),
+    queryFn: () => {
+      console.log('[DASHBOARD] Fetching gamification for user:', user.id);
+      return api.getGamification(user.id).then(res => {
+        console.log('[DASHBOARD] Gamification response:', res.data);
+        return res.data;
+      });
+    },
     enabled: !!user?.id,
     retry: false, // Don't retry on error in development
     onError: (error) => {
-      console.log('[DASHBOARD] Gamification API error (expected in dev with mock auth):', error);
+      console.error('[DASHBOARD] Gamification API error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+        userId: user?.id
+      });
     }
   });
 

@@ -12,6 +12,7 @@ from src.config.database import get_db
 from src.api.middleware.auth import get_current_user
 from src.models.goal import Goal
 from src.models.user import User
+from src.config.settings import settings
 import logging
 
 logger = logging.getLogger(__name__)
@@ -81,12 +82,23 @@ async def get_progress(
     
     Called by React frontend on login
     """
-    # Verify user has access
-    user_sub = current_user.get("sub")
-    db_user = db.query(User).filter(User.cognito_sub == user_sub).first()
-    
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
+    # In development mode with mock auth, skip cognito_sub lookup
+    # Just verify the user_id exists in the database
+    if settings.environment == "development" and current_user.get("sub") == "demo-user":
+        db_user = db.query(User).filter(User.id == user_id).first()
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User not found")
+    else:
+        # Production: Verify user has access via Cognito
+        user_sub = current_user.get("sub")
+        db_user = db.query(User).filter(User.cognito_sub == user_sub).first()
+        
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Verify the user_id matches the authenticated user
+        if db_user.id != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
     
     # Get user's goals (active and recently completed)
     active_goals = db.query(Goal).filter(

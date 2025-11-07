@@ -12,6 +12,7 @@ from src.config.database import get_db
 from src.api.middleware.auth import get_current_user, require_role
 from src.services.gamification.engine import GamificationEngine
 from src.services.gamification.badges import BadgeSystem
+from src.config.settings import settings
 from src.api.schemas.gamification import (
     GamificationResponse,
     BadgeInfo,
@@ -70,6 +71,21 @@ async def get_user_gamification(
     """
     Get gamification state for a specific user
     """
+    # In development mode with mock auth, skip user verification
+    # Just verify the user_id exists
+    if settings.environment == "development" and current_user.get("sub") == "demo-user":
+        from src.models.user import User
+        db_user = db.query(User).filter(User.id == user_id).first()
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User not found")
+    else:
+        # Production: Verify user access
+        user_sub = current_user.get("sub")
+        from src.models.user import User
+        db_user = db.query(User).filter(User.cognito_sub == user_sub).first()
+        if not db_user or db_user.id != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+    
     engine = GamificationEngine(db)
     gamification = engine.get_user_gamification(str(user_id))
     

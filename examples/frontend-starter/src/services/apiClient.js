@@ -70,7 +70,7 @@ export const api = {
   getProgress: (userId) => apiClient.get(`/progress/${userId}`),
   
   // Gamification
-  getGamification: (userId) => apiClient.get(`/gamification/${userId}`),
+  getGamification: (userId) => apiClient.get(`/gamification/users/${userId}`),
   getLeaderboard: (params) => apiClient.get('/gamification/leaderboard', { params }),
   
   // Goals

@@ -39,10 +39,20 @@ export function AuthProvider({ children }) {
     try {
       console.log('[AUTH] Login called with email:', email);
       
+      // Demo account UUIDs mapping
+      const demoAccountIds = {
+        'demo_goal_complete@demo.com': '180bcad6-380e-4a2f-809b-032677fcc721',
+        'demo_sat_complete@demo.com': '0281a3c5-e9aa-4d65-ad33-f49a80a77a23',
+        'demo_chemistry@demo.com': '063009da-20a4-4f53-8f67-f06573f7195e',
+        'demo_low_sessions@demo.com': 'e8bf67c3-57e6-405b-a1b5-80ac75aaf034',
+        'demo_multi_goal@demo.com': 'c02cb7f8-e63c-4945-9406-320e1d9046f3'
+      };
+      
       // In production, this would use AWS Cognito
       // For now, mock authentication
       const token = 'mock-token-' + Date.now();
-      const userId = 'user-' + email.replace('@', '-').replace('.', '-');
+      // Use actual UUID for demo accounts, otherwise generate a fake one
+      const userId = demoAccountIds[email] || 'user-' + email.replace('@', '-').replace('.', '-');
       
       console.log('[AUTH] Generated token and userId:', { token: token.substring(0, 20) + '...', userId });
       

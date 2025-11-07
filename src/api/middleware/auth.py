@@ -97,6 +97,26 @@ async def get_current_user(
         dict: Token payload with user information (sub, email, etc.)
     """
     token = credentials.credentials
+    
+    # Development mode: Support mock tokens for demo accounts
+    if settings.environment == "development" and token.startswith("mock-token-"):
+        # Extract email from token or use a default demo user
+        # The frontend generates tokens like "mock-token-1234567890"
+        # We'll look up the user by checking the database for demo accounts
+        from src.config.database import get_db_session
+        from src.models.user import User
+        
+        # Try to find demo user - we'll need to get email from somewhere
+        # For now, return a mock payload that will work with demo accounts
+        # The progress endpoint will handle looking up by user_id from the URL
+        return {
+            "sub": "demo-user",
+            "email": "demo@demo.com",
+            "role": "student",
+            "cognito:groups": ["students"]
+        }
+    
+    # Production: Verify real Cognito token
     payload = verify_token(token)
     
     return payload
