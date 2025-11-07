@@ -42,6 +42,7 @@ function Goals() {
     title: [validators.required, validators.minLength(3), validators.maxLength(100)],
     description: [validators.maxLength(500)],
     goal_type: [validators.required],
+    subject_name: [validators.required, validators.minLength(2), validators.maxLength(100)],
     target_completion_date: [validators.futureDate],
   };
 
@@ -58,6 +59,7 @@ function Goals() {
       title: '',
       description: '',
       goal_type: 'Standard',
+      subject_name: '',
       target_completion_date: '',
     },
     goalSchema
@@ -75,16 +77,46 @@ function Goals() {
 
   const createMutation = useMutation({
     mutationFn: (data) => api.createGoal(data),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      // Check if response indicates success
+      if (response?.data?.success !== false) {
       success('Goal created successfully!');
       queryClient.invalidateQueries(['goals', user?.id]);
       queryClient.invalidateQueries(['progress', user?.id]);
       setShowCreateForm(false);
-      setNewGoal({ title: '', description: '', goal_type: 'Standard', target_completion_date: '' });
+      reset();
+      // Reset form values explicitly
+      handleChange('title', '');
+      handleChange('description', '');
+      handleChange('goal_type', 'Standard');
+      handleChange('subject_name', '');
+      handleChange('target_completion_date', '');
+      } else {
+        // Response indicates failure
+        const errorMsg = response?.data?.error || response?.data?.detail || 'Failed to create goal';
+        showError(errorMsg);
+      }
     },
     onError: (err) => {
       console.error('[GOALS] Create error:', err);
-      showError('Failed to create goal. Backend may not be running.');
+      // Only show error if it's a real error (not a timeout that might have succeeded)
+      // Check if we got a response - if not, it might be a network issue
+      if (err.response) {
+        // We got a response, so it's a real error
+        const errorMsg = err.response?.data?.detail || err.response?.data?.error || 'Failed to create goal. Please try again.';
+        showError(errorMsg);
+      } else if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+        // Timeout - check if goal was actually created by refreshing the list
+        queryClient.invalidateQueries(['goals', user?.id]);
+        showError('Request timed out. Checking if goal was created...');
+        // After a delay, check if goal appears
+        setTimeout(() => {
+          queryClient.invalidateQueries(['goals', user?.id]);
+        }, 1000);
+      } else {
+        // Network error or other issue
+        showError('Failed to create goal. Backend may not be running.');
+      }
     },
   });
 
@@ -199,6 +231,24 @@ function Goals() {
                 <span className="error-message">{errors.description}</span>
               )}
             </div>
+            <div className="form-group">
+              <label>Subject *</label>
+              <input
+                type="text"
+                value={newGoal.subject_name}
+                onChange={(e) => handleChange('subject_name', e.target.value)}
+                onBlur={() => handleBlur('subject_name')}
+                required
+                placeholder="e.g., Math, History of Ballet, Chemistry"
+                className={touched.subject_name && errors.subject_name ? 'error' : ''}
+              />
+              {touched.subject_name && errors.subject_name && (
+                <span className="error-message">{errors.subject_name}</span>
+              )}
+              <small style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'block' }}>
+                This subject will appear in your Practice dropdown
+              </small>
+            </div>
             <div className="form-row">
               <div className="form-group">
                 <label>Goal Type</label>
@@ -266,12 +316,27 @@ function Goals() {
               onClick={(e) => handleGoalClick(goal, e)}
               title="Click to practice this goal"
             >
-              <div className="goal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                <h3 style={{ margin: 0, flex: 1, paddingRight: '0.5rem' }}>{goal.title}</h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span className={`goal-status goal-status-${goal.status}`}>
+              <div className="goal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                <div style={{ flex: 1, paddingRight: '1rem' }}>
+                  <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>{goal.title}</h3>
+                  {goal.status === 'completed' && (
+                    <div style={{ marginBottom: '0.5rem' }}>
+                      <span style={{ 
+                        color: 'var(--secondary-color)', 
+                        fontSize: '1.25rem',
+                        lineHeight: '1',
+                        display: 'inline-flex',
+                        alignItems: 'center'
+                      }}>
+                        ✓
+                      </span>
+                    </div>
+                  )}
+                  <span className={`goal-status goal-status-${goal.status}`} style={{ textTransform: 'capitalize' }}>
                     {goal.status}
                   </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem', flexShrink: 0 }}>
                   <button
                     className="goal-delete-btn"
                     onClick={(e) => handleDeleteGoal(goal, e)}
@@ -308,34 +373,35 @@ function Goals() {
                   >
                     ×
                   </button>
+                  {goal.elo_rating !== undefined && goal.elo_rating !== null && (
+                    <div style={{ 
+                      padding: '0.375rem 0.75rem',
+                      borderRadius: '4px',
+                      fontSize: '0.875rem',
+                      fontWeight: 'bold',
+                      color: goal.elo_rating >= 1500 ? 'var(--secondary-color)' : goal.elo_rating >= 1200 ? 'var(--primary-color)' : goal.elo_rating >= 800 ? 'var(--warning-color)' : 'var(--accent-color)',
+                      backgroundColor: goal.elo_rating >= 1500 ? '#E8F5E9' : goal.elo_rating >= 1200 ? 'var(--primary-light)' : goal.elo_rating >= 800 ? 'var(--bg-accent)' : '#FFEBEE',
+                      textAlign: 'right',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      Elo: {goal.elo_rating}
+                    </div>
+                  )}
                 </div>
               </div>
               {goal.description && (
-                <p className="goal-description">{goal.description}</p>
+                <p className="goal-description" style={{ marginBottom: '0.75rem' }}>{goal.description}</p>
               )}
-              <div className="goal-meta">
+              <div className="goal-meta" style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
                 <span className="goal-type">{goal.goal_type}</span>
                 {goal.target_completion_date && (
                   <span className="goal-date">
                     Target: {new Date(goal.target_completion_date).toLocaleDateString()}
                   </span>
                 )}
-                {goal.elo_rating !== undefined && goal.elo_rating !== null && (
-                  <span style={{ 
-                    marginLeft: '0.5rem',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '4px',
-                    fontSize: '0.875rem',
-                    fontWeight: 'bold',
-                    color: goal.elo_rating >= 1500 ? 'var(--secondary-color)' : goal.elo_rating >= 1200 ? 'var(--primary-color)' : goal.elo_rating >= 800 ? 'var(--warning-color)' : 'var(--accent-color)',
-                    backgroundColor: goal.elo_rating >= 1500 ? '#E8F5E9' : goal.elo_rating >= 1200 ? 'var(--primary-light)' : goal.elo_rating >= 800 ? 'var(--bg-accent)' : '#FFEBEE'
-                  }}>
-                    Elo: {goal.elo_rating} ({goal.elo_rating >= 1500 ? 'Advanced' : goal.elo_rating >= 1200 ? 'Intermediate' : goal.elo_rating >= 800 ? 'Beginner' : 'Novice'})
-                  </span>
-                )}
               </div>
               {goal.completion_percentage !== undefined && (
-                <div className="goal-progress">
+                <div className="goal-progress" style={{ marginBottom: '0.75rem' }}>
                   <div className="progress-bar">
                     <div 
                       className="progress-fill" 

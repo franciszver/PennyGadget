@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,6 +10,7 @@ import './Dashboard.css';
 function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [hideCompleted, setHideCompleted] = useState(false);
 
   const { data: progress, isLoading: progressLoading, error: progressError } = useQuery({
     queryKey: ['progress', user?.id],
@@ -144,9 +146,34 @@ function Dashboard() {
       
       <div className="dashboard-grid">
         <div className="card">
-          <h2>Your Progress</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h2 style={{ margin: 0 }}>Your Progress</h2>
+            {progress?.data?.goals && progress.data.goals.length > 0 && (
+              <button
+                onClick={() => setHideCompleted(!hideCompleted)}
+                style={{
+                  padding: '0.5rem 1rem',
+                  fontSize: '0.875rem',
+                  backgroundColor: hideCompleted ? 'var(--primary-color)' : 'var(--bg-secondary)',
+                  color: hideCompleted ? 'white' : 'var(--text-primary)',
+                  border: `1px solid ${hideCompleted ? 'var(--primary-color)' : 'var(--border-color)'}`,
+                  borderRadius: 'var(--border-radius-sm)',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {hideCompleted ? 'Show Completed' : 'Hide Completed'}
+              </button>
+            )}
+          </div>
           {progress?.data ? (() => {
-            const goals = progress.data.goals || [];
+            let goals = progress.data.goals || [];
+            
+            // Filter out completed goals if hideCompleted is true
+            if (hideCompleted) {
+              goals = goals.filter(goal => goal.status !== 'completed');
+            }
             
             // Calculate color based on completion percentage
             // Gradient from blue (0%) to green (100%) - matching Goals page progress bars
@@ -180,22 +207,13 @@ function Dashboard() {
               };
             });
             
-            // Calculate status counts for stats
-            const statusCounts = goals.reduce((acc, goal) => {
-              const status = goal.status || 'active';
-              acc[status] = (acc[status] || 0) + 1;
-              return acc;
-            }, {});
-            
             const totalGoals = goals.length;
-            const activeGoals = statusCounts.active || 0;
-            const completedGoals = statusCounts.completed || 0;
             
             return (
               <div className="progress-chart-container">
                 {totalGoals > 0 ? (
                   <>
-                    <ResponsiveContainer width="100%" height={250}>
+                    <ResponsiveContainer width="100%" height={300}>
                       <PieChart>
                         <Pie
                           data={chartData}
@@ -285,22 +303,18 @@ function Dashboard() {
                             return null;
                           }}
                         />
+                        <Legend 
+                          verticalAlign="bottom"
+                          height={36}
+                          formatter={(value, entry) => {
+                            // Access completion from the entry payload
+                            const completion = entry?.payload?.completion || 0;
+                            return `${value} (${completion.toFixed(0)}%)`;
+                          }}
+                          iconType="circle"
+                        />
                       </PieChart>
                     </ResponsiveContainer>
-                    <div className="progress-stats">
-                      <div className="stat-item">
-                        <span className="stat-label">Total Goals</span>
-                        <span className="stat-value">{totalGoals}</span>
-                      </div>
-                      <div className="stat-item">
-                        <span className="stat-label">Active</span>
-                        <span className="stat-value" style={{ color: 'var(--primary-color)' }}>{activeGoals}</span>
-                      </div>
-                      <div className="stat-item">
-                        <span className="stat-label">Completed</span>
-                        <span className="stat-value" style={{ color: 'var(--secondary-color)' }}>{completedGoals}</span>
-                      </div>
-                    </div>
                   </>
                 ) : (
                   <div className="no-goals-message">

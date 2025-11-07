@@ -157,7 +157,7 @@ async def create_goal(
                 raise HTTPException(status_code=404, detail="User not found")
             creator_id = db_user.id
     
-    # Find subject if subject_name is provided
+    # Find subject if subject_name is provided, or create it if it doesn't exist
     subject_id = None
     if request.subject_id:
         subject_id = UUID(request.subject_id)
@@ -166,7 +166,33 @@ async def create_goal(
         if subject:
             subject_id = subject.id
         else:
-            logger.warning(f"Subject not found: {request.subject_name}, creating goal without subject")
+            # Auto-create subject if it doesn't exist
+            # Use try-except to handle race conditions (if subject is created between query and insert)
+            try:
+                logger.info(f"Subject not found: {request.subject_name}, creating new subject")
+                new_subject = Subject(
+                    id=uuid.uuid4(),
+                    name=request.subject_name,
+                    category=None,  # Can be set later
+                    description=None
+                )
+                db.add(new_subject)
+                db.flush()  # Flush to get the ID without committing
+                subject_id = new_subject.id
+                logger.info(f"Created new subject: {request.subject_name} with ID {subject_id}")
+            except Exception as e:
+                # If subject creation fails (e.g., unique constraint violation from race condition),
+                # try to fetch it again
+                logger.warning(f"Failed to create subject {request.subject_name}, retrying query: {str(e)}")
+                db.rollback()  # Rollback the failed insert
+                subject = db.query(Subject).filter(Subject.name == request.subject_name).first()
+                if subject:
+                    subject_id = subject.id
+                    logger.info(f"Found subject after retry: {request.subject_name} with ID {subject_id}")
+                else:
+                    # If still not found, log error but continue without subject
+                    logger.error(f"Could not create or find subject: {request.subject_name}, creating goal without subject")
+                    subject_id = None
     
     # Parse target date if provided
     target_date = None

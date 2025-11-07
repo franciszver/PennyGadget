@@ -159,28 +159,40 @@ GET /api/v1/nudges/users/{user_id}
 
 ---
 
-### **Demo 5: Multi-Goal Progress Tracking**
+### **Demo 5: Multi-Goal Progress Tracking & Dashboard Visualization**
 
 **Account**: `demo_multi_goal@demo.com`  
 **Time**: 2 minutes
 
 **What to Show:**
-1. Login and navigate to **Progress** page
-2. Show **3 active goals** displayed simultaneously:
-   - "Master Algebra" (Math, 75% complete) - **Show Elo rating**
-   - "Chemistry Fundamentals" (Science, 50% complete) - **Show Elo rating**
-   - "SAT Prep" (Test Prep, 20% complete) - **Show Elo rating**
-3. Show progress bars for each goal
-4. Show **Elo ratings** with color-coded skill levels (Novice, Beginner, Intermediate, Advanced)
-5. Toggle "Hide Completed" button (shows count: "Finished (0)")
-6. Navigate to **Goals** page to see full goal management with Elo ratings
+1. Login and navigate to **Dashboard**
+2. Show **"Your Progress"** section with **interactive pie chart**:
+   - Each goal displayed as a colored segment
+   - Color gradient from blue (0%) to green (100%) based on completion
+   - **Legend shows goal names with completion percentages** (e.g., "Master Algebra (75%)")
+   - Hover over segments to see detailed tooltip (goal name, status, completion, subject, Elo rating)
+3. **Show "Hide Completed" toggle button** next to "Your Progress" heading
+4. Click toggle → Completed goals disappear from chart
+5. Click again → Completed goals reappear
+6. Navigate to **Progress** page to see:
+   - **3 active goals** displayed simultaneously:
+     - "Master Algebra" (Math, 75% complete) - **Show Elo rating**
+     - "Chemistry Fundamentals" (Science, 50% complete) - **Show Elo rating**
+     - "SAT Prep" (Test Prep, 20% complete) - **Show Elo rating**
+   - Progress bars for each goal
+   - **Elo ratings** with color-coded skill levels (Novice, Beginner, Intermediate, Advanced)
+   - Toggle "Hide Completed" button (shows count: "Finished (0)")
+7. Navigate to **Goals** page to see full goal management with Elo ratings
 
 **Talking Points:**
+- "The dashboard provides a visual overview of all goals with an interactive pie chart."
+- "Each goal is color-coded by completion - blue for starting, green for completing."
+- "The legend shows goal names and completion percentages for easy identification."
+- "Students can hide completed goals to focus on active ones."
 - "Students can track multiple goals simultaneously across different subjects."
 - "This isn't just single-subject tracking - students see their full learning journey."
 - "Progress bars show completion percentage for each goal."
 - "Elo ratings show skill level per subject - students can see their improvement over time."
-- "Students can hide completed goals to focus on active ones."
 
 **API Integration:**
 ```bash
@@ -200,30 +212,36 @@ GET /api/v1/goals
 **What to Show:**
 1. Navigate to **Q&A** page
 2. **Show conversation history loads automatically** - Previous questions and answers are displayed
-3. Ask first question: "What is photosynthesis?" (or use existing history)
-4. Show AI response with explanation
-5. Ask follow-up: "Can you explain the light-dependent reactions?"
-6. Show AI **remembers context** from previous question
-7. Ask another: "What about the Calvin cycle?"
-8. Show **conversation history persists** - Refresh page and history remains
-9. Explain: "Conversation history is stored and persists across sessions."
+3. **Show auto-scroll to bottom** - Page automatically scrolls to show latest messages
+4. Ask first question: "What is photosynthesis?" (or use existing history)
+5. Show AI response with **markdown formatting**:
+   - Headings, lists, code blocks, links, bold/italic text
+   - Properly formatted explanations with structure
+6. Ask follow-up: "Can you explain the light-dependent reactions?"
+7. Show AI **remembers context** from previous question
+8. Ask another: "What about the Calvin cycle?"
+9. Show **conversation history persists** - Refresh page and history remains
+10. **Show markdown rendering** - Code blocks, lists, headings all display beautifully
+11. Explain: "Conversation history is stored and persists across sessions with rich formatting."
 
 **Talking Points:**
 - "The AI remembers previous conversations - it's not just isolated Q&A."
 - "Follow-up questions work naturally because the AI has conversation context."
+- "Responses are beautifully formatted with markdown - code blocks, lists, headings make explanations clear."
 - "This creates a persistent learning companion, not just a search engine."
 - "Conversation history is stored and persists across page refreshes and sessions."
-- "Students can see their full conversation history at any time."
+- "Students can see their full conversation history at any time with proper formatting."
 
 **API Integration:**
 ```bash
 POST /api/v1/qa/query
 Body: { "student_id": "...", "query": "What is photosynthesis?" }
-# Returns: AI answer with conversation context
+# Returns: AI answer with conversation context (markdown formatted)
 
-GET /api/v1/qa/conversation-history/{student_id}
-# Returns: Recent conversation history for context
-```re
+GET /api/v1/enhancements/qa/conversation-history/{student_id}
+# Returns: Recent conversation history for context (persistent across sessions)
+# Note: Frontend automatically loads and displays history on page load
+```
 
 ---
 
@@ -234,27 +252,31 @@ GET /api/v1/qa/conversation-history/{student_id}
 
 **What to Show:**
 1. Navigate to **Practice** page
-2. Select "Math" from dropdown (dynamically populated from goals/suggestions)
-3. Click "Start Practice"
-4. Show **multiple-choice question** (generated using SymPy for math)
-5. Select an answer and submit
-6. **Show Elo rating update** - Rating adjusts based on performance (can increase or decrease)
-7. If correct: Show explanation + "Next Question" + "Pause, Dive Deeper" button
-8. If incorrect: Show explanation + rating may decrease + "Next Question"
-9. Click "Pause, Dive Deeper" → Navigates to Q&A with question preloaded
-10. Show Q&A auto-asks for deeper explanation
-11. Click "← Back to Practice" → Returns to next question
-12. Complete multiple questions → Show **summary report**:
+2. **Show dropdown only contains subjects from existing goals** (not suggestions)
+3. **If no goals exist**: Select any subject → Click "Start Practice" → **Goal is automatically created** for that subject
+4. Select "Math" from dropdown (populated from goals only)
+5. Click "Start Practice"
+6. Show **multiple-choice question** (generated using SymPy for math)
+7. Select an answer and submit
+8. **Show Elo rating update** - Rating adjusts based on performance (can increase or decrease)
+9. If correct: Show explanation + "Next Question" + "Curious? Explore Deeper" button
+10. If incorrect: Show explanation + rating may decrease + "Next Question"
+11. Click "Curious? Explore Deeper" → Navigates to Q&A with question preloaded
+12. Show Q&A auto-asks for deeper explanation
+13. Click "← Back to Practice" → Returns to next question
+14. Complete multiple questions → Show **summary report**:
     - Total questions, correct/incorrect count
     - Accuracy percentage
     - Elo rating changes
     - Tutor notification if accuracy < 50%
 
 **Talking Points:**
+- "Practice is focused on goals - students only see subjects they're actively working on."
+- "If a student wants to practice but has no goals, we automatically create one - removing friction."
 - "Practice questions are adaptive - difficulty adjusts based on Elo ratings."
 - "Elo ratings increase with correct answers and decrease with incorrect answers - providing accurate skill assessment."
 - "Math questions use SymPy for accurate generation (not just OpenAI)."
-- "Students can 'Dive Deeper' on any question to get AI explanations."
+- "Students can 'Explore Deeper' on any question to get AI explanations with markdown formatting."
 - "Practice integrates with Q&A for seamless learning flow."
 - "Poor performance automatically notifies tutors."
 
@@ -262,10 +284,11 @@ GET /api/v1/qa/conversation-history/{student_id}
 ```bash
 POST /api/v1/practice/assign?student_id=...&subject=Math&num_items=5
 # Returns: Practice assignment with multiple-choice questions
+# Note: If student has no goals, frontend automatically creates a goal first
 
 POST /api/v1/practice/complete?assignment_id=...&item_id=...
 Body: { "student_answer": "B", "correct": true, "time_taken_seconds": 16 }
-# Updates Elo rating and returns next question
+# Updates Elo rating (increases or decreases) and returns next question
 
 POST /api/v1/practice/summary?assignment_id=...&student_id=...
 # Returns: Summary report with accuracy and tutor notification status
@@ -295,8 +318,9 @@ POST /api/v1/practice/summary?assignment_id=...&student_id=...
    - Goal Type: "Standard"
    - Target Date: (optional)
 7. Submit → Goal created
-8. Click on a goal → Prompts "Would you like to practice?" → Navigates to Practice
-9. Click delete (×) on a goal → Confirmation dialog → Goal deleted
+8. Navigate to **Practice** page → **Show new goal appears in dropdown**
+9. Click on a goal → Prompts "Would you like to practice?" → Navigates to Practice
+10. Click delete (×) on a goal → Confirmation dialog → Goal deleted
 
 **Talking Points:**
 - "Students can create, manage, and delete goals."
@@ -744,13 +768,16 @@ python scripts/verify_demo_users.py
 3. **Adaptive Learning**: Elo ratings adjust difficulty automatically and reflect true skill level
 4. **Elo Rating System**: Ratings increase with correct answers and decrease with incorrect answers
 5. **Goal Reset**: Students can reset completed goals with low Elo to improve their skills
-6. **Seamless Integration**: RESTful API ready for Rails/React
-7. **Proactive Engagement**: Nudges at-risk students automatically
-8. **Cross-Subject Learning**: Builds comprehensive learning paths
-9. **Math Accuracy**: SymPy for reliable math problem generation
-10. **Conversation Memory**: Context-aware Q&A with persistent history across sessions
-11. **Practice-Q&A Integration**: Seamless flow between practice and explanations
-12. **Event-Driven**: Webhooks for real-time updates
+6. **Visual Progress Tracking**: Interactive pie chart on dashboard with goal names and completion percentages
+7. **Goal-Focused Practice**: Practice dropdown only shows subjects from goals; auto-creates goals if none exist
+8. **Rich Q&A Formatting**: Markdown rendering for code blocks, lists, headings, and formatted explanations
+9. **Seamless Integration**: RESTful API ready for Rails/React
+10. **Proactive Engagement**: Nudges at-risk students automatically
+11. **Cross-Subject Learning**: Builds comprehensive learning paths
+12. **Math Accuracy**: SymPy for reliable math problem generation
+13. **Conversation Memory**: Context-aware Q&A with persistent history across sessions and auto-scroll
+14. **Practice-Q&A Integration**: Seamless flow between practice and explanations
+15. **Event-Driven**: Webhooks for real-time updates
 
 ---
 

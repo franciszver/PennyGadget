@@ -133,12 +133,14 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .goal-header h3 {
   margin: 0;
   color: #333;
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
 .goal-status {
@@ -171,9 +173,12 @@
 .goal-meta {
   display: flex;
   gap: 1rem;
-  margin-top: 1rem;
+  margin-top: 0;
+  margin-bottom: 0.75rem;
   font-size: 0.875rem;
   color: #666;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .goal-type {
@@ -183,7 +188,9 @@
 }
 
 .goal-progress {
-  margin-top: 1rem;
+  margin-top: 0;
+  flex: 1;
+  min-width: 0;
 }
 
 .progress-bar {

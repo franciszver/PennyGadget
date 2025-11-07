@@ -166,6 +166,21 @@
   overflow: visible !important;
 }
 
+/* Legend styling */
+.progress-chart-container .recharts-legend-wrapper {
+  padding-top: 1rem !important;
+}
+
+.progress-chart-container .recharts-legend-item {
+  margin: 0.25rem 0.5rem !important;
+  font-size: 0.875rem !important;
+  color: var(--text-primary) !important;
+}
+
+.progress-chart-container .recharts-legend-item-text {
+  margin-left: 0.5rem !important;
+}
+
 .progress-stats {
   display: flex;
   justify-content: space-around;

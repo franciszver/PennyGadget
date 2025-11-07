@@ -119,43 +119,32 @@ function Progress() {
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   title="Click to practice this goal"
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <div>
-                      <strong>{goal.title}</strong> 
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        <strong>{goal.title}</strong>
+                      </div>
                       <span style={{ 
-                        marginLeft: '0.5rem', 
                         padding: '0.25rem 0.5rem', 
                         borderRadius: '4px',
                         fontSize: '0.875rem',
                         backgroundColor: goal.status === 'completed' ? '#d4edda' : '#d1ecf1',
-                        color: goal.status === 'completed' ? '#155724' : '#0c5460'
+                        color: goal.status === 'completed' ? '#155724' : '#0c5460',
+                        textTransform: 'capitalize'
                       }}>
-                        {goal.status === 'completed' ? '✓ Completed' : goal.status}
+                        {goal.status === 'completed' && '✓ '}
+                        {goal.status}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexShrink: 0 }}>
                       {goal.elo_rating !== undefined && goal.elo_rating !== null && (
-                        <div style={{ 
-                          display: 'flex', 
-                          flexDirection: 'column', 
-                          alignItems: 'flex-end',
-                          fontSize: '0.875rem'
+                        <span style={{ 
+                          fontWeight: 'bold', 
+                          color: goal.elo_rating >= 1500 ? 'var(--secondary-color)' : goal.elo_rating >= 1200 ? 'var(--primary-color)' : goal.elo_rating >= 800 ? 'var(--warning-color)' : 'var(--accent-color)',
+                          fontSize: '1rem'
                         }}>
-                          <span style={{ 
-                            fontWeight: 'bold', 
-                            color: goal.elo_rating >= 1500 ? 'var(--secondary-color)' : goal.elo_rating >= 1200 ? 'var(--primary-color)' : goal.elo_rating >= 800 ? 'var(--warning-color)' : 'var(--accent-color)',
-                            fontSize: '1rem'
-                          }}>
-                            Elo: {goal.elo_rating}
-                          </span>
-                          <span style={{ 
-                            fontSize: '0.75rem', 
-                            color: '#666',
-                            marginTop: '0.25rem'
-                          }}>
-                            {goal.elo_rating >= 1500 ? 'Advanced' : goal.elo_rating >= 1200 ? 'Intermediate' : goal.elo_rating >= 800 ? 'Beginner' : 'Novice'}
-                          </span>
-                        </div>
+                          Elo: {goal.elo_rating}
+                        </span>
                       )}
                       {goal.completion_percentage !== undefined && (
                         <span style={{ fontWeight: 'bold', color: goal.status === 'completed' ? 'var(--secondary-color)' : 'var(--primary-color)' }}>
@@ -224,35 +213,6 @@ function Progress() {
           ) : (
             <p>No goals yet. <span className="inspirational">Let's create one to begin your learning journey!</span></p>
           )}
-        </div>
-
-        <div className="progress-section">
-          <h2>Recent Sessions</h2>
-          {progressData.recent_sessions?.length > 0 ? (
-            <ul>
-              {progressData.recent_sessions.map((session, idx) => (
-                <li key={idx}>
-                  <strong>{session.subject}</strong> - {session.session_date}
-                  <br />
-                  Duration: {session.duration_minutes} minutes
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No sessions yet.</p>
-          )}
-        </div>
-
-        <div className="progress-section">
-          <h2>Practice Statistics</h2>
-          <div className="stats">
-            <div className="stat">
-              <strong>Completed:</strong> {progressData.practice_stats?.completed || 0}
-            </div>
-            <div className="stat">
-              <strong>Average Score:</strong> {progressData.practice_stats?.average_score || 'N/A'}
-            </div>
-          </div>
         </div>
 
         {progressData.suggestions && progressData.suggestions.length > 0 && (

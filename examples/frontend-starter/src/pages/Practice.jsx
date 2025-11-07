@@ -483,7 +483,7 @@ function Practice() {
       <div className="practice">
         <h1>Practice Assignment</h1>
         {isLoading ? (
-          <LoadingSpinner message={isCreatingGoal ? "Creating goal..." : "Loading practice question..."} />
+          <LoadingSpinner message={isCreatingGoal ? "Creating goal..." : "Generating Assignment...."} />
         ) : (
           <div className="practice-setup">
             <label>

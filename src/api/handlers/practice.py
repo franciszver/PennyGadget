@@ -121,18 +121,22 @@ async def assign_practice(
     # Select difficulty range
     difficulty_min, difficulty_max = adaptive_service.select_difficulty_range(student_rating)
     
-    # Try to find bank items first
+    # Try to find bank items first - request more than needed to account for duplicates
     bank_items = adaptive_service.find_bank_items(
         subject_id=str(subject_obj.id),
         difficulty_min=difficulty_min,
         difficulty_max=difficulty_max,
         goal_tags=goal_tags,
-        limit=num_items
+        limit=num_items * 2  # Request more to have options if duplicates are found
     )
     
     items = []
     assignment_id = uuid.uuid4()
     all_ai_generated = len(bank_items) == 0
+    
+    # Track used questions to prevent duplicates
+    used_bank_item_ids = set()
+    used_question_texts = set()
     
     # If no bank items found, try expanding difficulty range
     if len(bank_items) == 0:
@@ -148,11 +152,20 @@ async def assign_practice(
             difficulty_min=expanded_min,
             difficulty_max=expanded_max,
             goal_tags=None,  # Remove goal tag filter for broader search
-            limit=num_items
+            limit=num_items * 2  # Request more to have options if duplicates are found
         )
     
-    # Use bank items if available
+    # Use bank items if available, skipping duplicates
     for bank_item in bank_items:
+        # Skip if we've already used this bank item or this question text
+        if bank_item.id in used_bank_item_ids:
+            continue
+        if bank_item.question_text and bank_item.question_text.strip().lower() in used_question_texts:
+            continue
+        
+        # Check if we have enough items already
+        if len(items) >= num_items:
+            break
         assignment = PracticeAssignment(
             id=uuid.uuid4(),
             student_id=uuid.UUID(student_id),
@@ -166,6 +179,12 @@ async def assign_practice(
             created_at=datetime.now(timezone.utc)
         )
         db.add(assignment)
+        
+        # Track this question as used
+        used_bank_item_ids.add(bank_item.id)
+        if bank_item.question_text:
+            used_question_texts.add(bank_item.question_text.strip().lower())
+        
         # Convert bank item to multiple choice format
         # For existing bank items, generate choices from answer
         choices, correct_answer = _generate_choices_from_answer(bank_item.answer_text)
@@ -193,7 +212,12 @@ async def assign_practice(
             f"topic {topic or 'general'}, difficulty {difficulty_min}-{difficulty_max}"
         )
         
-        for _ in range(needed):
+        max_attempts_per_item = 5  # Maximum attempts to generate a unique question
+        attempts = 0
+        
+        while len(items) < num_items and attempts < needed * max_attempts_per_item:
+            attempts += 1
+            
             # Generate AI item
             ai_item_data = generator.generate_practice_item(
                 subject=subject,
@@ -201,6 +225,12 @@ async def assign_practice(
                 difficulty_level=(difficulty_min + difficulty_max) // 2,
                 goal_tags=goal_tags
             )
+            
+            # Check if this question text is already used
+            question_text = ai_item_data.get("question_text", "").strip().lower()
+            if question_text in used_question_texts:
+                logger.debug(f"Skipping duplicate AI-generated question: {question_text[:50]}...")
+                continue  # Skip this duplicate and try again
             
             assignment = PracticeAssignment(
                 id=uuid.uuid4(),
@@ -218,6 +248,9 @@ async def assign_practice(
                 created_at=datetime.now(timezone.utc)
             )
             db.add(assignment)
+            
+            # Track this question as used
+            used_question_texts.add(question_text)
             
             # Ensure AI-generated items have multiple choice format
             choices = ai_item_data.get("choices", [])
