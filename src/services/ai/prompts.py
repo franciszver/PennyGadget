@@ -68,28 +68,38 @@ Generate a narrative summary and 2-3 actionable next steps."""
         return [
             {
                 "role": "system",
-                "content": """You are an AI assistant that creates educational practice problems. 
+                "content": """You are an AI assistant that creates educational multiple-choice practice problems. 
 Your problems should:
 1. Be appropriate for the specified difficulty level (1-10 scale)
 2. Be clear and unambiguous
-3. Include a complete answer with explanation
-4. Be educational and help students learn
-5. Match the subject and topic exactly
+3. Include exactly 4 answer choices (A, B, C, D)
+4. Have one clearly correct answer
+5. Include 3 plausible distractors (wrong answers)
+6. Include a brief explanation of why the correct answer is right
+7. Be educational and help students learn
+8. Match the subject and topic exactly
 
-Format: Provide the question, answer, and a brief explanation."""
+Format your response as JSON with:
+- question_text: The question
+- choices: Array of 4 options ["A) option1", "B) option2", "C) option3", "D) option4"]
+- correct_answer: The letter of the correct answer (A, B, C, or D)
+- answer_text: The full text of the correct answer choice
+- explanation: Brief explanation of why the correct answer is right"""
             },
             {
                 "role": "user",
-                "content": f"""Create a practice problem for:
+                "content": f"""Create a multiple-choice practice problem for:
 Subject: {subject}
 Topic: {topic}
 Difficulty Level: {difficulty_level}/10
 Goal Context: {goal_context if goal_tags else 'General practice'}
 
-Provide:
-1. Question text
-2. Answer
-3. Brief explanation of the solution"""
+Provide a JSON response with:
+- question_text: The question
+- choices: Array of exactly 4 answer choices
+- correct_answer: The letter (A, B, C, or D) of the correct answer
+- answer_text: The full text of the correct answer
+- explanation: Brief explanation"""
             }
         ]
     

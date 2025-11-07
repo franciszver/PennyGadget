@@ -193,24 +193,8 @@ async def submit_query(
     db.commit()
     db.refresh(interaction)
     
-    # Award XP for asking a question (only if not out of scope)
+    # Gamification removed - no longer awarding XP
     xp_result = None
-    if not out_of_scope:
-        try:
-            from src.services.gamification.engine import GamificationEngine
-            gamification_engine = GamificationEngine(db)
-            
-            xp_result = gamification_engine.award_xp(
-                user_id=request.student_id,
-                action="qa_query",
-                metadata={
-                    "interaction_id": str(interaction.id),
-                    "confidence": confidence_result["confidence"],
-                    "is_ambiguous": query_analysis['is_ambiguous']
-                }
-            )
-        except Exception as e:
-            logger.warning(f"Failed to award XP for Q&A query: {str(e)}")
     
     # Build response with edge case metadata
     response_data = {
@@ -232,13 +216,7 @@ async def submit_query(
         }
     }
     
-    # Add gamification info if available
-    if xp_result:
-        response_data["gamification"] = {
-            "xp_awarded": xp_result.get("xp_awarded", 0),
-            "level_up": xp_result.get("level_up", False),
-            "badges_awarded": xp_result.get("badges_awarded", [])
-        }
+    # Gamification removed - no longer included in response
     
     # Add clarification suggestions if ambiguous
     if query_analysis['is_ambiguous'] and query_analysis.get('suggestions'):

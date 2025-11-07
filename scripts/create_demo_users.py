@@ -14,8 +14,9 @@ from src.models.user import User
 from src.models.subject import Subject
 from src.models.goal import Goal
 from src.models.session import Session as SessionModel
+from src.models.qa import QAInteraction
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 
 
@@ -75,7 +76,7 @@ def create_demo_goal_complete(db: Session, user: User, subjects: dict, tutor: Us
         description="Master fundamental algebra concepts",
         status="completed",
         completion_percentage=100.00,
-        completed_at=datetime.utcnow() - timedelta(days=2),
+        completed_at=datetime.now(timezone.utc) - timedelta(days=2),
         current_streak=5,
         xp_earned=500
     )
@@ -118,7 +119,7 @@ def create_demo_goal_complete(db: Session, user: User, subjects: dict, tutor: Us
             id=uuid.uuid4(),
             student_id=user.id,
             tutor_id=tutor.id,
-            session_date=datetime.utcnow() - timedelta(days=30-i*5),
+            session_date=datetime.now(timezone.utc) - timedelta(days=30-i*5),
             duration_minutes=60,
             subject_id=subjects['Algebra'].id if i < 3 else subjects['Geometry'].id,
             transcript_text=f"Demo session {i+1} transcript",
@@ -144,7 +145,7 @@ def create_demo_sat_complete(db: Session, user: User, subjects: dict, tutor: Use
         description="Achieve high score on SAT Math section",
         status="completed",
         completion_percentage=100.00,
-        completed_at=datetime.utcnow() - timedelta(days=1),
+        completed_at=datetime.now(timezone.utc) - timedelta(days=1),
         current_streak=7,
         xp_earned=750
     )
@@ -156,7 +157,7 @@ def create_demo_sat_complete(db: Session, user: User, subjects: dict, tutor: Use
             id=uuid.uuid4(),
             student_id=user.id,
             tutor_id=tutor.id,
-            session_date=datetime.utcnow() - timedelta(days=30-i*4),
+            session_date=datetime.now(timezone.utc) - timedelta(days=30-i*4),
             duration_minutes=90,
             subject_id=subjects['SAT Math'].id,
             transcript_text=f"SAT prep session {i+1}",
@@ -182,7 +183,7 @@ def create_demo_chemistry(db: Session, user: User, subjects: dict, tutor: User):
         description="Master basic chemistry concepts",
         status="completed",
         completion_percentage=100.00,
-        completed_at=datetime.utcnow() - timedelta(days=3),
+        completed_at=datetime.now(timezone.utc) - timedelta(days=3),
         current_streak=6,
         xp_earned=600
     )
@@ -194,7 +195,7 @@ def create_demo_chemistry(db: Session, user: User, subjects: dict, tutor: User):
             id=uuid.uuid4(),
             student_id=user.id,
             tutor_id=tutor.id,
-            session_date=datetime.utcnow() - timedelta(days=30-i*5),
+            session_date=datetime.now(timezone.utc) - timedelta(days=30-i*5),
             duration_minutes=60,
             subject_id=subjects['Chemistry'].id,
             transcript_text=f"Chemistry session {i+1}",
@@ -231,7 +232,7 @@ def create_demo_low_sessions(db: Session, user: User, subjects: dict, tutor: Use
             id=uuid.uuid4(),
             student_id=user.id,
             tutor_id=tutor.id,
-            session_date=datetime.utcnow() - timedelta(days=7-i*3),
+            session_date=datetime.now(timezone.utc) - timedelta(days=7-i*3),
             duration_minutes=45,
             subject_id=subjects['Algebra'].id,
             transcript_text=f"Session {i+1}",
@@ -301,7 +302,7 @@ def create_demo_multi_goal(db: Session, user: User, subjects: dict, tutor: User)
             id=uuid.uuid4(),
             student_id=user.id,
             tutor_id=tutor.id,
-            session_date=datetime.utcnow() - timedelta(days=30-i*4),
+            session_date=datetime.now(timezone.utc) - timedelta(days=30-i*4),
             duration_minutes=60,
             subject_id=session_subjects[i % 3].id,
             transcript_text=f"Multi-goal session {i+1}",
@@ -338,11 +339,85 @@ def create_demo_user(db: Session, email: str, name: str, created_days_ago: int) 
         },
         analytics={},
         disclaimer_shown=True,
-        created_at=datetime.utcnow() - timedelta(days=created_days_ago)
+        created_at=datetime.now(timezone.utc) - timedelta(days=created_days_ago)
     )
     db.add(user)
     db.flush()
     return user
+
+
+def create_demo_qa(db: Session, user: User, subjects: dict, tutor: User):
+    """Create demo_qa account with Q&A conversation history"""
+    # Delete existing Q&A interactions for this demo user
+    db.query(QAInteraction).filter(QAInteraction.student_id == user.id).delete()
+    
+    # Create a goal for context
+    goal = Goal(
+        id=uuid.uuid4(),
+        student_id=user.id,
+        created_by=user.id,
+        subject_id=subjects['Biology'].id,
+        goal_type="Standard",
+        title="Learn Biology",
+        description="Study biology fundamentals",
+        status="active",
+        completion_percentage=40.00,
+        current_streak=3,
+        xp_earned=200
+    )
+    db.add(goal)
+    
+    # Create Q&A interactions to show conversation history
+    qa_interactions = [
+        {
+            "query": "What is photosynthesis?",
+            "answer": "Photosynthesis is the process by which plants, algae, and some bacteria convert light energy into chemical energy stored in glucose. It occurs in two main stages: the light-dependent reactions (in the thylakoids) and the light-independent reactions or Calvin cycle (in the stroma).",
+            "confidence": "High",
+            "confidence_score": 0.95,
+            "created_at": datetime.now(timezone.utc) - timedelta(hours=2)
+        },
+        {
+            "query": "Can you explain the light-dependent reactions?",
+            "answer": "The light-dependent reactions occur in the thylakoid membranes of chloroplasts. They capture light energy and use it to: 1) Split water molecules (photolysis), releasing oxygen as a byproduct, 2) Generate ATP through photophosphorylation, and 3) Produce NADPH by reducing NADP+. These reactions require light and produce ATP and NADPH that are used in the Calvin cycle.",
+            "confidence": "High",
+            "confidence_score": 0.92,
+            "created_at": datetime.now(timezone.utc) - timedelta(hours=1, minutes=45)
+        },
+        {
+            "query": "What about the Calvin cycle?",
+            "answer": "The Calvin cycle (light-independent reactions) occurs in the stroma of chloroplasts. It uses ATP and NADPH from the light-dependent reactions to fix carbon dioxide into organic molecules. The cycle has three main phases: 1) Carbon fixation (CO2 + RuBP), 2) Reduction (using ATP and NADPH), and 3) Regeneration of RuBP. The end product is G3P, which can be used to make glucose and other organic compounds.",
+            "confidence": "High",
+            "confidence_score": 0.90,
+            "created_at": datetime.now(timezone.utc) - timedelta(hours=1, minutes=30)
+        }
+    ]
+    
+    for qa_data in qa_interactions:
+        qa = QAInteraction(
+            id=uuid.uuid4(),
+            student_id=user.id,
+            query=qa_data["query"],
+            answer=qa_data["answer"],
+            confidence=qa_data["confidence"],
+            confidence_score=qa_data["confidence_score"],
+            context_subjects=["Biology"],
+            created_at=qa_data["created_at"]
+        )
+        db.add(qa)
+    
+    # Create a few sessions for context
+    for i in range(3):
+        session = SessionModel(
+            id=uuid.uuid4(),
+            student_id=user.id,
+            tutor_id=tutor.id,
+            session_date=datetime.now(timezone.utc) - timedelta(days=30-i*7),
+            duration_minutes=45,
+            subject_id=subjects['Biology'].id,
+            transcript_text=f"Biology session {i+1} covering photosynthesis and cellular respiration",
+            topics_covered=["Biology", "Photosynthesis"]
+        )
+        db.add(session)
 
 
 def create_demo_tutor(db: Session) -> User:
@@ -362,7 +437,7 @@ def create_demo_tutor(db: Session) -> User:
             "specializations": ["Math", "Science", "Test Prep"]
         },
         disclaimer_shown=True,
-        created_at=datetime.utcnow() - timedelta(days=365)
+        created_at=datetime.now(timezone.utc) - timedelta(days=365)
     )
     db.add(tutor)
     db.flush()
@@ -394,6 +469,7 @@ def main():
             "demo_chemistry@demo.com": ("Chemistry Demo", 30, create_demo_chemistry),
             "demo_low_sessions@demo.com": ("Low Sessions Demo", 7, create_demo_low_sessions),
             "demo_multi_goal@demo.com": ("Multi-Goal Demo", 30, create_demo_multi_goal),
+            "demo_qa@demo.com": ("Q&A Demo", 30, create_demo_qa),
         }
         
         created_users = []

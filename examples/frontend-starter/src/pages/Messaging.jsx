@@ -64,6 +64,27 @@ function Messaging() {
     <div className="messaging">
       <h1>Messages</h1>
       
+      {/* Integration Notice */}
+      <div className="integration-notice">
+        <div className="integration-notice-header">
+          <span className="integration-icon">💬</span>
+          <h3>Integration Point: Tutor Responses</h3>
+        </div>
+        <p className="integration-message">
+          This is where tutor responses would be integrated. In production, tutors would receive student messages 
+          and respond through this messaging system. All tutor responses would appear in the conversation threads below.
+        </p>
+        <div className="integration-details">
+          <strong>How it works:</strong>
+          <ul>
+            <li>Students send messages to tutors through this interface</li>
+            <li>Tutors receive notifications and respond via their dashboard</li>
+            <li>All messages are stored in conversation threads</li>
+            <li>Threads can be closed when issues are resolved</li>
+          </ul>
+        </div>
+      </div>
+      
       <div className="messaging-container">
         <div className="threads-list">
           <h2>Conversations</h2>

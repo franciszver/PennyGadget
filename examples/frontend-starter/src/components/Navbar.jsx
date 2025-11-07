@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import Notifications from './Notifications';
 import './Navbar.css';
 
 function Navbar() {
@@ -28,8 +29,8 @@ function Navbar() {
           <Link to="/progress">Progress</Link>
           <Link to="/goals">Goals</Link>
           <Link to="/messaging">Messages</Link>
-          <Link to="/gamification">Gamification</Link>
           <div className="navbar-user">
+            <Notifications />
             <Link to="/settings" className="navbar-settings">Settings</Link>
             <span>{user?.email || 'User'}</span>
             <button onClick={handleLogout} className="logout-btn">

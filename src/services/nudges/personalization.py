@@ -61,18 +61,13 @@ class NudgePersonalization:
         engagement_level = self._calculate_engagement_level(recent_sessions, recent_practice, recent_qa)
         time_preferences = self._get_time_preferences(recent_sessions, recent_practice)
         
-        # Get gamification data
-        gamification = student.gamification or {}
-        current_level = gamification.get("level", 1)
-        current_streak = gamification.get("current_streak", 0)
+        # Gamification removed - no longer used
         
         return {
             "preferred_subjects": preferred_subjects,
             "learning_pace": learning_pace,  # slow, moderate, fast
             "engagement_level": engagement_level,  # low, medium, high
             "time_preferences": time_preferences,  # morning, afternoon, evening
-            "current_level": current_level,
-            "current_streak": current_streak,
             "recent_activity": {
                 "sessions_30d": len(recent_sessions),
                 "practice_30d": len(recent_practice),
@@ -141,17 +136,7 @@ class NudgePersonalization:
             if top_subject:
                 suggestions.append(f"Continue practicing {top_subject['name']}")
         
-        # Level-based suggestions
-        current_level = insights.get("current_level", 1)
-        if current_level < 5:
-            suggestions.append("Complete practice items to level up")
-        elif current_level >= 5:
-            suggestions.append("Try more challenging practice items")
-        
-        # Streak-based suggestions
-        current_streak = insights.get("current_streak", 0)
-        if current_streak > 0:
-            suggestions.append(f"Keep your {current_streak}-day streak going!")
+        # Gamification removed - level and streak suggestions no longer used
         
         # Engagement-based suggestions
         engagement = insights.get("engagement_level", "medium")
@@ -203,13 +188,14 @@ class NudgePersonalization:
         """Personalize goal completion nudge message"""
         greeting = f"Congratulations {student_name}!" if student_name else "Congratulations!"
         
-        current_level = insights.get("current_level", 1)
-        if current_level < 3:
+        # Gamification removed - use engagement level instead
+        engagement = insights.get("engagement_level", "medium")
+        if engagement == "low":
             message = f"{greeting} You're making great progress! Keep it up!"
-        elif current_level < 7:
-            message = f"{greeting} You're doing amazing! You're at level {current_level}!"
+        elif engagement == "medium":
+            message = f"{greeting} You're doing amazing! Keep the momentum going!"
         else:
-            message = f"{greeting} Outstanding work! You're at level {current_level} - keep pushing forward!"
+            message = f"{greeting} Outstanding work! Keep pushing forward!"
         
         return message
     
@@ -222,11 +208,13 @@ class NudgePersonalization:
         """Personalize login nudge message"""
         greeting = f"Welcome back, {student_name}!" if student_name else "Welcome back!"
         
-        current_streak = insights.get("current_streak", 0)
-        if current_streak > 0:
-            message = f"{greeting} You're on a {current_streak}-day streak! 🔥"
-        else:
+        # Gamification removed - use recent activity instead
+        recent_activity = insights.get("recent_activity", {})
+        practice_count = recent_activity.get("practice_30d", 0)
+        if practice_count > 0:
             message = f"{greeting} Ready to continue your learning journey?"
+        else:
+            message = f"{greeting} Let's get started with your first practice session!"
         
         return message
     

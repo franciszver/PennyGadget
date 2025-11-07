@@ -77,7 +77,9 @@ docker-compose down
 - ✅ **Messaging** - Tutor-student communication threads
 
 ### Post-MVP Features
-- ✅ **Gamification** - XP, levels, badges, streaks, leaderboard
+- ✅ **Elo Rating System** - Adaptive skill assessment with rating increases/decreases
+- ✅ **Goal Reset** - Reset completed goals with low Elo to improve skills
+- ✅ **Conversation History** - Persistent Q&A history across sessions
 - ✅ **Analytics Dashboards** - Parent and admin views with exports
 - ✅ **Advanced Analytics** - Override patterns, confidence telemetry, retention
 - ✅ **Integrations** - LMS, Calendar, Push Notifications, Webhooks
@@ -287,24 +289,22 @@ python run_server.py
 
 #### Adaptive Practice
 - `POST /api/v1/practice/assign` - Assign practice items to student
-- `POST /api/v1/practice/assignments/{id}/complete` - Complete practice assignment
+- `POST /api/v1/practice/assignments/{id}/complete` - Complete practice assignment (updates Elo rating)
+- Elo ratings increase with correct answers and decrease with incorrect answers
 
 #### Conversational Q&A
 - `POST /api/v1/qa/query` - Submit student query and get AI answer
-- `GET /api/v1/qa/conversation-history/{student_id}` - Get conversation history
+- `GET /api/v1/enhancements/qa/conversation-history/{student_id}` - Get persistent conversation history
 - `GET /api/v1/qa/conversation-context/{student_id}` - Get conversation context
 
 #### Progress Tracking
 - `GET /api/v1/progress/{user_id}` - Get student progress dashboard
 
-#### Gamification
-- `GET /api/v1/gamification/me` - Get current user's gamification status
-- `GET /api/v1/gamification/users/{user_id}` - Get user gamification status
-- `GET /api/v1/gamification/badges` - Get all available badges
-- `GET /api/v1/gamification/badges/me` - Get current user's badges
-- `GET /api/v1/gamification/leaderboard` - Get leaderboard
-- `POST /api/v1/gamification/award-xp` - Award XP to user
-- `GET /api/v1/gamification/streak/update` - Update user streak
+#### Goals Management
+- `GET /api/v1/goals` - Get all goals for student
+- `POST /api/v1/goals` - Create new goal
+- `POST /api/v1/goals/{goal_id}/reset` - Reset completed goal (status, completion, Elo)
+- `DELETE /api/v1/goals/{goal_id}` - Delete goal
 
 #### Personalized Nudges
 - `POST /api/v1/nudges/check` - Check if nudge should be sent
@@ -424,12 +424,11 @@ npm run dev
 - ✅ Axios HTTP client with interceptors
 - ✅ Authentication context and protected routes
 - ✅ Complete page implementations:
-  - Dashboard - Overview and quick actions
-  - Practice - Adaptive practice assignments
-  - Q&A - Conversational question answering
-  - Progress - Student progress tracking
-  - Goals - Goal management
-  - Gamification - XP, badges, leaderboard
+  - Dashboard - Overview, quick actions, and nudges
+  - Practice - Adaptive practice assignments with Elo rating updates
+  - Q&A - Conversational question answering with persistent history
+  - Progress - Student progress tracking with Elo ratings
+  - Goals - Goal management with Elo ratings and reset functionality
   - Messaging - Tutor-student communication
   - Settings - User preferences
   - Login - Authentication
@@ -542,7 +541,7 @@ PennyGadget/
 │   │   │   ├── nudges.py          # Personalized nudges
 │   │   │   ├── overrides.py       # Tutor overrides
 │   │   │   ├── messaging.py       # Messaging system
-│   │   │   ├── gamification.py    # Gamification
+│   │   │   ├── goals.py            # Goals management
 │   │   │   ├── dashboards.py      # Analytics dashboards
 │   │   │   ├── advanced_analytics.py  # Advanced analytics
 │   │   │   ├── integrations.py    # External integrations
@@ -565,9 +564,8 @@ PennyGadget/
 │   │   │   ├── advanced.py        # Advanced analytics
 │   │   │   ├── exporter.py        # Data export
 │   │   │   └── ab_testing.py      # A/B testing
-│   │   ├── gamification/          # Gamification engine
-│   │   │   ├── engine.py          # Core gamification logic
-│   │   │   └── badges.py          # Badge system
+│   │   ├── goals/                  # Goal services
+│   │   │   └── progress.py        # Goal progress tracking
 │   │   ├── practice/              # Practice services
 │   │   │   ├── adaptive.py       # Adaptive difficulty
 │   │   │   ├── generator.py       # Practice generation
@@ -595,7 +593,6 @@ PennyGadget/
 │   │   ├── nudge.py               # Nudge model
 │   │   ├── override.py            # Override model
 │   │   ├── messaging.py           # Messaging models
-│   │   ├── gamification.py        # Gamification models
 │   │   ├── subject.py             # Subject model
 │   │   ├── goal.py                # Goal model
 │   │   ├── integration.py         # Integration models

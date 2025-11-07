@@ -34,7 +34,7 @@ async def get_parent_dashboard(
     """
     Get parent dashboard for a specific student
     
-    Shows progress, gamification, and recent activity
+    Shows progress and recent activity
     """
     # Verify user is parent or admin
     user_sub = current_user.get("sub")
@@ -97,13 +97,7 @@ async def get_parent_dashboard(
             },
             "progress": progress_summary,
             "recent_summaries": summaries_data,
-            "active_goals": goals_data,
-            "gamification_summary": {
-                "level": progress_summary["gamification"]["level"],
-                "total_xp": progress_summary["gamification"]["total_xp"],
-                "badges_count": progress_summary["gamification"]["badges_count"],
-                "current_streak": progress_summary["gamification"]["current_streak"]
-            }
+            "active_goals": goals_data
         }
     }
 
@@ -132,7 +126,7 @@ async def get_parent_students(
             "student_id": str(s.id),
             "email": s.email,
             "name": s.profile.get("name") if s.profile else None,
-            "last_activity": (s.gamification or {}).get("last_activity") if s.gamification else None
+            "last_activity": None  # Gamification removed
         }
         for s in students
     ]
@@ -292,11 +286,7 @@ async def export_data(
                     "total_practice": progress["practice"]["completed"],
                     "total_qa": progress["qa"]["total_queries"],
                     "active_goals": progress["goals"]["active"],
-                    "level": progress["gamification"]["level"],
-                    "total_xp": progress["gamification"]["total_xp"],
-                    "badges_count": progress["gamification"]["badges_count"],
-                    "current_streak": progress["gamification"]["current_streak"],
-                    "last_activity": progress.get("last_activity", "")
+                    "last_activity": None  # Gamification removed
                 })
             except Exception as e:
                 logger.warning(f"Failed to get progress for student {student.id}: {str(e)}")

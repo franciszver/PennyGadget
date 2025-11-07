@@ -16,6 +16,7 @@ from src.models.summary import Summary
 from src.models.session import Session as SessionModel
 from src.models.user import User
 from src.services.ai.summarizer import SessionSummarizer
+from src.services.goals.progress import GoalProgressService
 from src.api.schemas.summaries import CreateSummaryRequest, SummaryResponse
 
 logger = logging.getLogger(__name__)
@@ -55,27 +56,33 @@ async def create_summary(
             detail=f"Failed to generate summary: {str(e)}"
         )
     
-    # Award XP for session completion
+    # Gamification removed - no longer awarding XP
+    
+    # Update goal progress based on session completion
     try:
-        from src.services.gamification.engine import GamificationEngine
-        gamification_engine = GamificationEngine(db)
+        goal_progress_service = GoalProgressService(db)
+        # Get subject_id from the session or summary
+        # Try to find subject by name from subjects_covered
+        subject_id = None
+        if summary.subjects_covered:
+            from src.models.subject import Subject
+            subject = db.query(Subject).filter(
+                Subject.name == summary.subjects_covered[0]
+            ).first()
+            if subject:
+                subject_id = str(subject.id)
         
-        xp_result = gamification_engine.award_xp(
-            user_id=request.student_id,
-            action="session_completed",
-            metadata={
-                "session_id": str(request.session_id),
-                "duration_minutes": request.session_duration_minutes,
-                "subject": request.subject
-            }
-        )
+        # Fallback: try to get from request if available
+        if not subject_id and hasattr(request, 'subject_id') and request.subject_id:
+            subject_id = request.subject_id
         
-        # Update streak
-        streak_info = gamification_engine.update_streak(request.student_id)
+        if subject_id:
+            goal_progress_service.update_goal_progress_from_session(
+                student_id=request.student_id,
+                subject_id=subject_id
+            )
     except Exception as e:
-        logger.warning(f"Failed to award XP for session completion: {str(e)}")
-        xp_result = None
-        streak_info = None
+        logger.warning(f"Failed to update goal progress from session: {str(e)}")
     
     response_data = {
         "summary_id": str(summary.id),
@@ -86,14 +93,6 @@ async def create_summary(
         "summary_type": summary.summary_type,
         "created_at": summary.created_at.isoformat() if hasattr(summary.created_at, 'isoformat') else str(summary.created_at)
     }
-    
-    # Add gamification info if available
-    if xp_result:
-        response_data["gamification"] = {
-            "xp_awarded": xp_result.get("xp_awarded", 0),
-            "level_up": xp_result.get("level_up", False),
-            "badges_awarded": xp_result.get("badges_awarded", [])
-        }
     
     return {
         "success": True,

@@ -4,7 +4,7 @@ Determines when and what nudges to send
 """
 
 from typing import Optional, Dict, List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session as DBSession
 from sqlalchemy import func, and_
 
@@ -38,20 +38,37 @@ class NudgeEngine:
         if not user:
             return {"should_send": False, "reason": "user_not_found"}
         
-        # Check frequency cap
-        today = datetime.utcnow().date()
+        # Check frequency cap (but allow inactivity nudges to bypass if no unopened nudges exist)
+        now = datetime.now(timezone.utc)
+        today = now.date()
         nudge_count_today = self.db.query(Nudge).filter(
             Nudge.user_id == user_id,
             func.date(Nudge.sent_at) == today
         ).count()
         
+        # Check if there are unopened nudges (if yes, don't send new ones)
+        unopened_nudges = self.db.query(Nudge).filter(
+            Nudge.user_id == user_id,
+            Nudge.opened_at.is_(None),
+            Nudge.sent_at >= now - timedelta(days=7)
+        ).count()
+        
+        # If there are unopened nudges, don't send new ones (except inactivity which is critical)
+        if unopened_nudges > 0 and check_type != "inactivity":
+            return {
+                "should_send": False,
+                "reason": "unopened_nudges_exist",
+                "unopened_count": unopened_nudges
+            }
+        
         nudge_cap = user.profile.get("preferences", {}).get("nudge_frequency_cap", settings.default_nudge_frequency_cap)
         
-        if nudge_count_today >= nudge_cap:
+        # For inactivity nudges, allow one per day even if cap is reached
+        if nudge_count_today >= nudge_cap and check_type != "inactivity":
             return {
                 "should_send": False,
                 "reason": "frequency_cap_reached",
-                "next_available": (datetime.utcnow() + timedelta(days=1)).isoformat() + "Z"
+                "next_available": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat() + "Z"
             }
         
         # Check based on type
@@ -66,8 +83,17 @@ class NudgeEngine:
     
     def _check_inactivity_nudge(self, user_id: str, user: User) -> Dict:
         """Check if inactivity nudge should be sent"""
-        # Check days since signup
-        days_since_signup = (datetime.utcnow() - user.created_at).days
+        # Check days since signup (handle timezone-aware datetimes)
+        now = datetime.now(timezone.utc)
+        created_at = user.created_at
+        if created_at.tzinfo is None:
+            # If naive, assume UTC
+            created_at = created_at.replace(tzinfo=timezone.utc)
+        else:
+            # If timezone-aware, convert to UTC
+            created_at = created_at.astimezone(timezone.utc)
+        
+        days_since_signup = (now - created_at).days
         
         # Count sessions
         session_count = self.db.query(SessionModel).filter(
@@ -124,7 +150,7 @@ class NudgeEngine:
         completed_goals = self.db.query(Goal).filter(
             Goal.student_id == user_id,
             Goal.status == "completed",
-            Goal.completed_at >= datetime.utcnow() - timedelta(days=7)
+            Goal.completed_at >= datetime.now(timezone.utc) - timedelta(days=7)
         ).all()
         
         if completed_goals:
@@ -169,6 +195,11 @@ class NudgeEngine:
     
     def _check_login_nudge(self, user_id: str, user: User) -> Dict:
         """Check if login nudge should be sent"""
+        # First check if inactivity nudge should be sent (higher priority)
+        inactivity_check = self._check_inactivity_nudge(user_id, user)
+        if inactivity_check.get("should_send"):
+            return inactivity_check
+        
         # Get personalized message
         insights = self.personalization.get_student_insights(user_id)
         base_message = "Welcome back! Ready to continue your learning journey?"

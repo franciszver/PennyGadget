@@ -43,5 +43,103 @@
 
 .actions a:hover {
   background: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Nudge Cards */
+.nudge-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #007bff;
+}
+
+.nudge-card.inactivity-nudge {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border-left: 4px solid #ffc107;
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+}
+
+.nudge-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.nudge-icon {
+  font-size: 1.5rem;
+}
+
+.nudge-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #333;
+}
+
+.nudge-message {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #555;
+  margin-bottom: 1rem;
+}
+
+.nudge-suggestions {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.nudge-suggestions strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.nudge-suggestions ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nudge-suggestions li {
+  padding: 0.5rem 0;
+  color: #555;
+}
+
+.nudge-action-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 0.5rem;
+}
+
+.nudge-action-btn:hover {
+  background: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.nudge-action-btn.primary {
+  background: #ffc107;
+  color: #333;
+}
+
+.nudge-action-btn.primary:hover {
+  background: #ffb300;
+  box-shadow: 0 4px 8px rgba(255, 193, 7, 0.4);
+}
+
+.nudges-section {
+  margin-bottom: 1.5rem;
 }
 

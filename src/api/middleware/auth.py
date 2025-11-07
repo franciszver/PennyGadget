@@ -134,6 +134,16 @@ async def get_current_user_optional(
     
     try:
         token = credentials.credentials
+        
+        # Development mode: Support mock tokens for demo accounts
+        if settings.environment == "development" and token.startswith("mock-token-"):
+            return {
+                "sub": "demo-user",
+                "email": "demo@demo.com",
+                "role": "student",
+                "cognito:groups": ["students"]
+            }
+        
         payload = verify_token(token)
         return payload
     except HTTPException:

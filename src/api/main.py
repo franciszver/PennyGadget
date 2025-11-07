@@ -115,7 +115,7 @@ async def get_metrics():
 
 
 # Import routers
-from src.api.handlers import summaries, practice, qa, progress, nudges, overrides, messaging, gamification, dashboards, advanced_analytics, integrations, enhancements
+from src.api.handlers import summaries, practice, qa, progress, nudges, overrides, messaging, dashboards, advanced_analytics, integrations, enhancements, goals
 
 app.include_router(summaries.router, prefix="/api/v1")
 app.include_router(practice.router, prefix="/api/v1")
@@ -124,11 +124,11 @@ app.include_router(progress.router, prefix="/api/v1")
 app.include_router(nudges.router, prefix="/api/v1")
 app.include_router(overrides.router, prefix="/api/v1")
 app.include_router(messaging.router, prefix="/api/v1")
-app.include_router(gamification.router, prefix="/api/v1")
 app.include_router(dashboards.router, prefix="/api/v1")
 app.include_router(advanced_analytics.router, prefix="/api/v1")
 app.include_router(integrations.router, prefix="/api/v1")
 app.include_router(enhancements.router, prefix="/api/v1")
+app.include_router(goals.router, prefix="/api/v1")
 
 
 if __name__ == "__main__":

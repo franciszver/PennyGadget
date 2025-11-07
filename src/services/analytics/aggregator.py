@@ -91,9 +91,6 @@ class AnalyticsAggregator:
             QAModel.student_id == actual_student_id
         ).scalar() or 0
         
-        # Get gamification data
-        gamification = student.gamification or {}
-        
         # Get recent activity (last 30 days)
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
         
@@ -129,14 +126,7 @@ class AnalyticsAggregator:
             },
             "qa": {
                 "total_queries": qa_count
-            },
-            "gamification": {
-                "level": gamification.get("level", 1),
-                "total_xp": gamification.get("total_xp_earned", 0),
-                "badges_count": len(gamification.get("badges", [])),
-                "current_streak": gamification.get("streaks", {}).get("current_streak", 0)
-            },
-            "last_activity": gamification.get("last_activity")
+            }
         }
     
     def get_override_analytics(

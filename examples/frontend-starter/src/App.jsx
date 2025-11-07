@@ -7,7 +7,6 @@ import Progress from './pages/Progress';
 import Goals from './pages/Goals';
 import Settings from './pages/Settings';
 import Messaging from './pages/Messaging';
-import Gamification from './pages/Gamification';
 import Login from './pages/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
@@ -115,14 +114,6 @@ function AppContent() {
                 element={
                   <ProtectedRoute>
                     <Messaging />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/gamification"
-                element={
-                  <ProtectedRoute>
-                    <Gamification />
                   </ProtectedRoute>
                 }
               />

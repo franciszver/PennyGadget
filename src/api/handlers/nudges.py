@@ -6,9 +6,10 @@ POST /nudges/:nudge_id/engage - Track nudge engagement
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session as DBSession
+from sqlalchemy import func
 from pydantic import BaseModel
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.config.database import get_db
 from src.api.middleware.auth import get_current_user_optional
@@ -55,7 +56,7 @@ async def check_nudge(
             channel=result["nudge"]["channel"],
             message=result["nudge"]["message"],
             personalized=result["nudge"]["personalized"],
-            sent_at=datetime.utcnow(),
+            sent_at=datetime.now(timezone.utc),
             trigger_reason=result["nudge"].get("trigger_reason"),
             suggestions_made=result["nudge"].get("suggestions", [])
         )
@@ -107,6 +108,128 @@ async def check_nudge(
         }
 
 
+@router.get("/users/{user_id}")
+async def get_user_nudges(
+    user_id: UUID,
+    db: DBSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user_optional)
+):
+    """
+    Get active nudges for a user
+    
+    Called by React frontend on login/dashboard load
+    Returns nudges that haven't been dismissed and are still relevant
+    """
+    from datetime import timedelta
+    
+    # Get recent nudges (last 7 days) that haven't been opened yet
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=7)
+    
+    nudges = db.query(Nudge).filter(
+        Nudge.user_id == user_id,
+        Nudge.sent_at >= cutoff_date,
+        Nudge.opened_at.is_(None)  # Only show unopened nudges
+    ).order_by(Nudge.sent_at.desc()).limit(5).all()
+    
+    # Always check if we should create a new nudge (especially for inactivity)
+    # For inactivity nudges, create a new one if condition is met and no recent unopened nudge exists
+    engine = NudgeEngine(db)
+    
+    # Check for inactivity nudge first (most important - should appear every login until resolved)
+    inactivity_result = engine.should_send_nudge(str(user_id), "inactivity")
+    if inactivity_result.get("should_send"):
+        # Check if there's already an unopened inactivity nudge from today
+        # Use timezone-aware comparison
+        now = datetime.now(timezone.utc)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = today_start + timedelta(days=1)
+        recent_inactivity = db.query(Nudge).filter(
+            Nudge.user_id == user_id,
+            Nudge.type == "inactivity",
+            Nudge.sent_at >= today_start,
+            Nudge.sent_at < today_end,
+            Nudge.opened_at.is_(None)
+        ).first()
+        
+        if not recent_inactivity:
+            # Create the nudge directly instead of calling check_nudge to avoid recursion
+            try:
+                # Create nudge record
+                nudge = Nudge(
+                    id=uuid.uuid4(),
+                    user_id=user_id,
+                    type=inactivity_result["nudge"]["type"],
+                    channel=inactivity_result["nudge"]["channel"],
+                    message=inactivity_result["nudge"]["message"],
+                    personalized=inactivity_result["nudge"]["personalized"],
+                    sent_at=datetime.now(timezone.utc),
+                    trigger_reason=inactivity_result["nudge"].get("trigger_reason"),
+                    suggestions_made=inactivity_result["nudge"].get("suggestions", [])
+                )
+                db.add(nudge)
+                db.commit()
+                db.refresh(nudge)
+                
+                # Refresh to get the newly created nudge
+                nudges = db.query(Nudge).filter(
+                    Nudge.user_id == user_id,
+                    Nudge.sent_at >= cutoff_date,
+                    Nudge.opened_at.is_(None)
+                ).order_by(Nudge.sent_at.desc()).limit(5).all()
+            except Exception as e:
+                logger.error(f"Failed to create inactivity nudge: {str(e)}", exc_info=True)
+                db.rollback()
+                # Re-raise to see the error in API response
+                raise HTTPException(status_code=500, detail=f"Failed to create nudge: {str(e)}")
+    elif not nudges:
+        # Only check for login nudge if no inactivity nudge and no unopened nudges
+        login_result = engine.should_send_nudge(str(user_id), "login")
+        if login_result.get("should_send"):
+            try:
+                # Create nudge record directly
+                nudge = Nudge(
+                    id=uuid.uuid4(),
+                    user_id=user_id,
+                    type=login_result["nudge"]["type"],
+                    channel=login_result["nudge"]["channel"],
+                    message=login_result["nudge"]["message"],
+                    personalized=login_result["nudge"]["personalized"],
+                    sent_at=datetime.now(timezone.utc),
+                    trigger_reason=login_result["nudge"].get("trigger_reason"),
+                    suggestions_made=login_result["nudge"].get("suggestions", [])
+                )
+                db.add(nudge)
+                db.commit()
+                db.refresh(nudge)
+                
+                nudges = db.query(Nudge).filter(
+                    Nudge.user_id == user_id,
+                    Nudge.sent_at >= cutoff_date,
+                    Nudge.opened_at.is_(None)
+                ).order_by(Nudge.sent_at.desc()).limit(5).all()
+            except Exception as e:
+                logger.error(f"Failed to create login nudge: {str(e)}")
+                db.rollback()
+    
+    return {
+        "success": True,
+        "data": {
+            "nudges": [
+                {
+                    "nudge_id": str(n.id),
+                    "type": n.type,
+                    "message": n.message,
+                    "suggestions": n.suggestions_made or [],
+                    "sent_at": n.sent_at.isoformat() if n.sent_at else None,
+                    "trigger_reason": n.trigger_reason
+                }
+                for n in nudges
+            ],
+            "count": len(nudges)
+        }
+    }
+
+
 @router.post("/{nudge_id}/engage")
 async def track_nudge_engagement(
     nudge_id: UUID,
@@ -124,12 +247,12 @@ async def track_nudge_engagement(
         raise HTTPException(status_code=404, detail="Nudge not found")
     
     if request.engagement_type == "opened" and not nudge.opened_at:
-        nudge.opened_at = datetime.utcnow()
+        nudge.opened_at = datetime.now(timezone.utc)
     elif request.engagement_type == "clicked" and not nudge.clicked_at:
-        nudge.clicked_at = datetime.utcnow()
+        nudge.clicked_at = datetime.now(timezone.utc)
         # Also mark as opened if not already
         if not nudge.opened_at:
-            nudge.opened_at = datetime.utcnow()
+            nudge.opened_at = datetime.now(timezone.utc)
     
     db.commit()
     

@@ -59,28 +59,47 @@ export const api = {
   getSummaries: (userId) => apiClient.get(`/summaries/${userId}`),
   
   // Practice
-  assignPractice: (data) => apiClient.post('/practice/assign', data),
-  completePractice: (assignmentId, data) => 
-    apiClient.post(`/practice/assignments/${assignmentId}/complete`, data),
+  assignPractice: (data) => {
+    // FastAPI endpoint expects query parameters for POST /practice/assign
+    const params = new URLSearchParams();
+    Object.keys(data).forEach(key => {
+      if (data[key] !== null && data[key] !== undefined) {
+        if (Array.isArray(data[key])) {
+          // Handle arrays (like goal_tags)
+          data[key].forEach(item => params.append(key, item));
+        } else {
+          params.append(key, data[key]);
+        }
+      }
+    });
+    return apiClient.post(`/practice/assign?${params.toString()}`);
+  },
+  completePractice: (assignmentId, itemId, data) => 
+    apiClient.post(`/practice/complete?assignment_id=${assignmentId}&item_id=${itemId}`, data),
   
   // Q&A
   submitQuery: (data) => apiClient.post('/qa/query', data),
+  getConversationHistory: (userId, limit = 10, hours = 24) => 
+    apiClient.get(`/enhancements/qa/conversation-history/${userId}?limit=${limit}&hours=${hours}`),
   
   // Progress
   getProgress: (userId) => apiClient.get(`/progress/${userId}`),
   
-  // Gamification
-  getGamification: (userId) => apiClient.get(`/gamification/users/${userId}`),
-  getLeaderboard: (params) => apiClient.get('/gamification/leaderboard', { params }),
-  
   // Goals
   getGoals: (userId) => apiClient.get(`/goals?student_id=${userId}`),
   createGoal: (data) => apiClient.post('/goals', data),
+  deleteGoal: (goalId) => apiClient.delete(`/goals/${goalId}`),
+  resetGoal: (goalId) => apiClient.post(`/goals/${goalId}/reset`),
   
   // Messaging
   getThreads: (userId) => apiClient.get(`/messaging/threads?user_id=${userId}`),
   sendMessage: (threadId, data) => 
     apiClient.post(`/messaging/threads/${threadId}/messages`, data),
+  
+  // Nudges
+  getNudges: (userId) => apiClient.get(`/nudges/users/${userId}`),
+  engageNudge: (nudgeId, engagementType) => 
+    apiClient.post(`/nudges/${nudgeId}/engage`, { engagement_type: engagementType }),
 };
 
 export default apiClient;

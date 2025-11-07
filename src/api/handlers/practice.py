@@ -4,11 +4,13 @@ POST /practice/assign - Assign adaptive practice items
 POST /practice/complete - Record practice completion
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session as DBSession
 from sqlalchemy import func
-from typing import Optional
+from typing import Optional, List, Tuple
 from uuid import UUID
+from pydantic import BaseModel
+from datetime import timedelta
 
 from src.config.database import get_db
 from src.api.middleware.auth import get_current_user_optional
@@ -17,13 +19,54 @@ from src.models.user import User
 from src.models.subject import Subject
 from src.services.practice.adaptive import AdaptivePracticeService
 from src.services.practice.generator import PracticeGenerator
+from src.services.goals.progress import GoalProgressService
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
+import random
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/practice", tags=["practice"])
+
+
+class CompletePracticeRequest(BaseModel):
+    """Request body for completing a practice item"""
+    student_answer: str
+    correct: bool
+    time_taken_seconds: int
+    hints_used: int = 0
+
+
+def _generate_choices_from_answer(answer_text: str) -> Tuple[List[str], str]:
+    """Generate 4 multiple choice options from an answer
+    
+    Returns:
+        tuple: (choices list, correct_answer_letter)
+    """
+    # Create distractors
+    distractors = [
+        "A related but incorrect option",
+        "Another plausible but wrong answer",
+        "An incorrect alternative"
+    ]
+    
+    # Combine correct answer with distractors and shuffle
+    all_options = [answer_text] + distractors
+    random.shuffle(all_options)
+    
+    # Format as A, B, C, D
+    letters = ["A", "B", "C", "D"]
+    choices = [f"{letter}) {option}" for letter, option in zip(letters, all_options)]
+    
+    # Find which letter has the correct answer
+    correct_letter = None
+    for i, option in enumerate(all_options):
+        if option == answer_text:
+            correct_letter = letters[i]
+            break
+    
+    return choices, correct_letter or "A"
 
 
 @router.post("/assign")
@@ -119,15 +162,21 @@ async def assign_practice(
             difficulty_level=bank_item.difficulty_level,
             goal_tags=goal_tags or [],
             student_rating_before=student_rating,
-            assigned_at=datetime.utcnow(),
-            created_at=datetime.utcnow()
+            assigned_at=datetime.now(timezone.utc),
+            created_at=datetime.now(timezone.utc)
         )
         db.add(assignment)
+        # Convert bank item to multiple choice format
+        # For existing bank items, generate choices from answer
+        choices, correct_answer = _generate_choices_from_answer(bank_item.answer_text)
+        
         items.append({
             "item_id": str(assignment.id),
             "source": "bank",
             "question": bank_item.question_text,
             "answer": bank_item.answer_text,
+            "choices": choices,
+            "correct_answer": correct_answer,
             "explanation": bank_item.explanation,
             "difficulty": bank_item.difficulty_level,
             "subject": subject,
@@ -165,10 +214,18 @@ async def assign_practice(
                 difficulty_level=(difficulty_min + difficulty_max) // 2,
                 goal_tags=goal_tags or [],
                 student_rating_before=student_rating,
-                assigned_at=datetime.utcnow(),
-                created_at=datetime.utcnow()
+                assigned_at=datetime.now(timezone.utc),
+                created_at=datetime.now(timezone.utc)
             )
             db.add(assignment)
+            
+            # Ensure AI-generated items have multiple choice format
+            choices = ai_item_data.get("choices", [])
+            correct_answer = ai_item_data.get("correct_answer", "A")
+            
+            # If choices not provided, generate them
+            if not choices or len(choices) < 4:
+                choices, correct_answer = _generate_choices_from_answer(ai_item_data["answer_text"])
             
             items.append({
                 "item_id": str(assignment.id),
@@ -176,6 +233,8 @@ async def assign_practice(
                 "flagged": True,
                 "question": ai_item_data["question_text"],
                 "answer": ai_item_data["answer_text"],
+                "choices": choices,
+                "correct_answer": correct_answer,
                 "explanation": ai_item_data["explanation"],
                 "difficulty": (difficulty_min + difficulty_max) // 2,
                 "subject": subject,
@@ -213,12 +272,9 @@ async def assign_practice(
 
 @router.post("/complete")
 async def complete_practice(
-    assignment_id: str,
-    item_id: str,
-    student_answer: str,
-    correct: bool,
-    time_taken_seconds: int,
-    hints_used: int = 0,
+    assignment_id: str = Query(..., description="Practice assignment ID (for compatibility)"),
+    item_id: str = Query(..., description="Practice item ID (actual PracticeAssignment.id)"),
+    request: CompletePracticeRequest = ...,
     db: DBSession = Depends(get_db),
     current_user: dict = Depends(get_current_user_optional)
 ):
@@ -226,24 +282,29 @@ async def complete_practice(
     Record completion of a practice item
     
     Updates student rating and calculates performance
+    
+    Note: item_id is the actual PracticeAssignment.id in the database.
+    assignment_id is kept for API compatibility but item_id is used for lookup.
     """
-    # Get assignment
+    # Get assignment - use item_id as it's the actual PracticeAssignment.id
     assignment = db.query(PracticeAssignment).filter(
-        PracticeAssignment.id == assignment_id,
-        PracticeAssignment.id == item_id  # item_id should match assignment_id
+        PracticeAssignment.id == item_id
     ).first()
     
     if not assignment:
-        raise HTTPException(status_code=404, detail="Practice assignment not found")
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Practice assignment not found with item_id: {item_id}"
+        )
     
     # Initialize adaptive service
     adaptive_service = AdaptivePracticeService(db)
     
     # Calculate performance score
     performance_score = adaptive_service.calculate_performance_score(
-        correct=correct,
-        time_taken_seconds=time_taken_seconds,
-        hints_used=hints_used
+        correct=request.correct,
+        time_taken_seconds=request.time_taken_seconds,
+        hints_used=request.hints_used
     )
     
     # Get question rating (convert difficulty to Elo scale)
@@ -255,6 +316,8 @@ async def complete_practice(
         str(assignment.subject_id) if assignment.subject_id else ""
     )
     
+    # Update Elo rating regardless of correctness
+    # This allows ratings to decrease when students perform poorly
     if assignment.subject_id:
         student_rating_after = adaptive_service.update_student_rating(
             str(assignment.student_id),
@@ -265,37 +328,34 @@ async def complete_practice(
     else:
         student_rating_after = student_rating_before
     
-    # Update assignment
-    assignment.completed = True
-    assignment.performance_score = performance_score
+    # Store rating update in assignment (regardless of correctness)
     assignment.student_rating_after = student_rating_after
-    assignment.completed_at = datetime.utcnow()
+    assignment.performance_score = performance_score
     
-    db.commit()
-    
-    # Award XP for practice completion
-    try:
-        from src.services.gamification.engine import GamificationEngine
-        gamification_engine = GamificationEngine(db)
+    # Only mark as completed if answer is correct
+    # This allows students to retry incorrect answers
+    if request.correct:
+        assignment.completed = True
+        assignment.completed_at = datetime.now(timezone.utc)
         
-        # Award base XP
-        action = "practice_perfect" if performance_score >= 1.0 else "practice_completed"
-        xp_result = gamification_engine.award_xp(
-            user_id=str(assignment.student_id),
-            action=action,
-            metadata={
-                "perfect_score": performance_score >= 1.0,
-                "performance_score": float(performance_score),
-                "assignment_id": str(assignment.id)
-            }
+        # Update goal progress based on this practice completion
+        goal_progress_service = GoalProgressService(db)
+        goal_progress_service.update_goal_progress_from_practice(
+            student_id=str(assignment.student_id),
+            goal_tags=assignment.goal_tags,
+            subject_id=str(assignment.subject_id) if assignment.subject_id else None
         )
         
-        # Update streak
-        streak_info = gamification_engine.update_streak(str(assignment.student_id))
-    except Exception as e:
-        logger.warning(f"Failed to award XP for practice completion: {str(e)}")
+        # Gamification removed - no longer awarding XP
         xp_result = None
         streak_info = None
+    else:
+        # Incorrect answer - don't mark as completed, but rating still updated
+        # This allows ratings to decrease on poor performance
+        xp_result = None
+        streak_info = None
+    
+    db.commit()
     
     # Calculate next difficulty suggestion
     if assignment.subject_id:
@@ -311,19 +371,134 @@ async def complete_practice(
         "next_difficulty_suggestion": next_difficulty
     }
     
-    # Add gamification info if available
-    if xp_result:
-        response_data["gamification"] = {
-            "xp_awarded": xp_result.get("xp_awarded", 0),
-            "level_up": xp_result.get("level_up", False),
-            "badges_awarded": xp_result.get("badges_awarded", [])
-        }
-    
-    if streak_info:
-        response_data["streak"] = streak_info
+    # Gamification removed - no longer included in response
     
     return {
         "success": True,
         "data": response_data
+    }
+
+
+@router.post("/summary")
+async def get_practice_summary(
+    assignment_id: str = Query(..., description="Practice assignment ID"),
+    student_id: str = Query(..., description="Student ID"),
+    db: DBSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user_optional)
+):
+    """
+    Get summary of practice session and determine if tutor notification is needed
+    
+    Checks all completed questions in the assignment and calculates:
+    - Total questions
+    - Correct/incorrect count
+    - Average attempts
+    - Whether tutor help is needed
+    """
+    from sqlalchemy import func
+    
+    # Get all assignments for this assignment_id (all items in the session)
+    # Note: assignment_id here refers to the session ID, not individual item IDs
+    # We need to get all items that were assigned together
+    # For now, we'll get all recent assignments for the student in the last hour
+    
+    # Get student's recent practice assignments (within last hour)
+    cutoff_time = datetime.now(timezone.utc) - timedelta(hours=1)
+    assignments = db.query(PracticeAssignment).filter(
+        PracticeAssignment.student_id == student_id,
+        PracticeAssignment.assigned_at >= cutoff_time
+    ).all()
+    
+    if not assignments:
+        raise HTTPException(status_code=404, detail="No practice assignments found")
+    
+    # Calculate summary
+    total_questions = len(assignments)
+    completed_assignments = [a for a in assignments if a.completed]
+    correct_count = len([a for a in completed_assignments if a.performance_score and float(a.performance_score) >= 0.5])
+    incorrect_count = len(completed_assignments) - correct_count
+    
+    # Calculate average attempts (we'll estimate based on performance scores)
+    # Lower performance scores might indicate more attempts
+    total_performance = sum([float(a.performance_score) for a in completed_assignments if a.performance_score]) or 0
+    avg_performance = total_performance / len(completed_assignments) if completed_assignments else 0
+    
+    # Estimate attempts: if performance is very low, likely multiple attempts
+    # This is a heuristic - in production, you'd track actual attempts
+    estimated_avg_attempts = 1.0 if avg_performance >= 0.7 else (2.0 if avg_performance >= 0.4 else 3.0)
+    
+    # Determine if tutor notification is needed
+    # Criteria: Less than 50% correct OR average attempts > 2
+    accuracy = correct_count / total_questions if total_questions > 0 else 0
+    needs_tutor_help = accuracy < 0.5 or estimated_avg_attempts > 2
+    
+    # Notify tutor if needed
+    tutor_notified = False
+    if needs_tutor_help:
+        try:
+            # Get student info
+            student = db.query(User).filter(User.id == student_id).first()
+            if student:
+                # Find tutor (in production, this would be the student's assigned tutor)
+                # For now, find any tutor user
+                tutor = db.query(User).filter(User.role == "tutor").first()
+                
+                if tutor:
+                    # Create a message thread or send notification
+                    try:
+                        from src.services.notifications.email import EmailService
+                        email_service = EmailService(db)
+                        
+                        email_service.send_email(
+                            to_email=tutor.email,
+                            subject=f"Student Needs Help: {student.email}",
+                            body_html=f"""
+                            <html>
+                            <body>
+                                <h2>Student Needs Additional Support</h2>
+                                <p>A student has completed a practice session with the following results:</p>
+                                <ul>
+                                    <li>Total Questions: {total_questions}</li>
+                                    <li>Correct: {correct_count}</li>
+                                    <li>Incorrect: {incorrect_count}</li>
+                                    <li>Accuracy: {(accuracy * 100):.1f}%</li>
+                                    <li>Estimated Average Attempts: {estimated_avg_attempts:.1f}</li>
+                                </ul>
+                                <p>Please reach out to provide additional support.</p>
+                            </body>
+                            </html>
+                            """,
+                            body_text=f"""
+                            Student Needs Additional Support
+                            
+                            A student has completed a practice session with the following results:
+                            - Total Questions: {total_questions}
+                            - Correct: {correct_count}
+                            - Incorrect: {incorrect_count}
+                            - Accuracy: {(accuracy * 100):.1f}%
+                            - Estimated Average Attempts: {estimated_avg_attempts:.1f}
+                            
+                            Please reach out to provide additional support.
+                            """
+                        )
+                        tutor_notified = True
+                        logger.info(f"Tutor notification sent for student {student_id}")
+                    except Exception as e:
+                        logger.warning(f"Failed to send tutor notification email: {str(e)}")
+        except Exception as e:
+            logger.warning(f"Failed to notify tutor: {str(e)}")
+    
+    return {
+        "success": True,
+        "data": {
+            "total_questions": total_questions,
+            "correct_count": correct_count,
+            "incorrect_count": incorrect_count,
+            "completed_count": len(completed_assignments),
+            "accuracy": round(accuracy * 100, 1),
+            "average_attempts": round(estimated_avg_attempts, 1),
+            "needs_tutor_help": needs_tutor_help,
+            "tutor_notified": tutor_notified
+        }
     }
 

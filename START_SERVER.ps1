@@ -15,11 +15,20 @@ try {
 
 # Check if uvicorn is available
 try {
-    python -m uvicorn --version | Out-Null
-    Write-Host "Uvicorn: Available" -ForegroundColor Cyan
+    $uvicornCheck = python -m uvicorn --version 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "Uvicorn: Available" -ForegroundColor Cyan
+    } else {
+        throw "Uvicorn not found"
+    }
 } catch {
     Write-Host "Installing uvicorn..." -ForegroundColor Yellow
     python -m pip install uvicorn[standard] fastapi
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Error: Failed to install uvicorn. Please run: pip install uvicorn[standard] fastapi" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "Uvicorn installed successfully" -ForegroundColor Green
 }
 
 Write-Host ""

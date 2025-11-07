@@ -21,7 +21,7 @@ class PracticeQualityService:
         Validate practice item quality
         
         Args:
-            item: Practice item dict with question_text, answer_text, explanation
+            item: Practice item dict with question_text, answer_text, explanation, choices, correct_answer
         
         Returns:
             Validation result with quality_score and issues
@@ -40,6 +40,24 @@ class PracticeQualityService:
         elif len(question) > 500:
             issues.append("Question too long (maximum 500 characters)")
             quality_score -= 0.1
+        
+        # Check multiple choice format
+        choices = item.get("choices", [])
+        if not choices or not isinstance(choices, list):
+            issues.append("Missing multiple choice options")
+            quality_score -= 0.3
+        elif len(choices) < 4:
+            issues.append(f"Not enough choices (expected 4, got {len(choices)})")
+            quality_score -= 0.2
+        elif len(choices) > 4:
+            issues.append(f"Too many choices (expected 4, got {len(choices)})")
+            quality_score -= 0.1
+        
+        # Check correct answer
+        correct_answer = item.get("correct_answer", "").strip().upper()
+        if not correct_answer or correct_answer not in ["A", "B", "C", "D"]:
+            issues.append("Missing or invalid correct_answer (must be A, B, C, or D)")
+            quality_score -= 0.3
         
         # Check answer quality
         answer = item.get("answer_text", "").strip()
@@ -195,10 +213,14 @@ Please provide an improved version in JSON format:
             ai_response = self.openai.chat_completion(prompt)
             
             # Try JSON parsing first
-            json_match = re.search(r'\{[^{}]*"question_text"[^{}]*\}', ai_response, re.DOTALL)
+            json_match = re.search(r'\{[^{}]*(?:"question_text"|"choices")[^{}]*\}', ai_response, re.DOTALL)
             if json_match:
                 try:
                     item = json.loads(json_match.group())
+                    # Ensure multiple choice format
+                    if "choices" not in item or not isinstance(item.get("choices"), list):
+                        # Generate choices if missing
+                        item = self._add_multiple_choice_format(item)
                     # Validate and improve if needed
                     validation = self.validate_practice_item(item)
                     if not validation["is_valid"]:
@@ -207,46 +229,134 @@ Please provide an improved version in JSON format:
                 except json.JSONDecodeError:
                     pass
             
-            # Fallback to text parsing
+            # Fallback to text parsing with multiple choice generation
             return self._parse_text_response(ai_response)
             
         except Exception as e:
+            # Return multiple choice format even for errors
+            error_answer = "Answer generation failed. Please consult your tutor."
+            choices, correct_answer = self._generate_multiple_choice_options(error_answer)
             return {
                 "question_text": f"Practice question for {subject} - {topic} (Difficulty: {difficulty_level})",
-                "answer_text": "Answer generation failed. Please consult your tutor.",
+                "answer_text": error_answer,
+                "choices": choices,
+                "correct_answer": correct_answer,
                 "explanation": f"AI generation encountered an error: {str(e)}"
             }
     
     def _parse_text_response(self, response: str) -> Dict:
-        """Parse text response into practice item"""
+        """Parse text response into practice item with multiple choice format"""
         question_text = ""
         answer_text = ""
         explanation = ""
+        choices = []
+        correct_answer = None
         
-        # Try to find sections
-        sections = re.split(r'(?:question|answer|explanation):', response, flags=re.IGNORECASE)
+        # Try to find multiple choice format (A), B), C), D))
+        choice_pattern = r'([A-D])[\)\.]\s*([^\n]+)'
+        found_choices = re.findall(choice_pattern, response, re.IGNORECASE)
         
-        if len(sections) >= 2:
-            question_text = sections[1].strip() if len(sections) > 1 else ""
-        if len(sections) >= 3:
-            answer_text = sections[2].strip() if len(sections) > 2 else ""
-        if len(sections) >= 4:
-            explanation = sections[3].strip() if len(sections) > 3 else ""
+        if len(found_choices) >= 4:
+            # Found multiple choice format
+            choices = [f"{letter.upper()}) {text.strip()}" for letter, text in found_choices[:4]]
+            # Try to find which is correct
+            correct_match = re.search(r'(?:correct|answer|right).*?([A-D])', response, re.IGNORECASE)
+            if correct_match:
+                correct_answer = correct_match.group(1).upper()
+                # Extract the correct answer text
+                for letter, text in found_choices:
+                    if letter.upper() == correct_answer:
+                        answer_text = text.strip()
+                        break
+        else:
+            # Generate choices from answer
+            answer_text = self._extract_answer(response)
+            if answer_text:
+                # Generate 3 distractors and format as multiple choice
+                choices, correct_answer = self._generate_multiple_choice_options(answer_text, response)
+                # Extract answer text from the correct choice
+                for choice in choices:
+                    if choice.startswith(f"{correct_answer})"):
+                        answer_text = choice.replace(f"{correct_answer}) ", "")
+                        break
         
-        # Fallback: split by common patterns
-        if not question_text:
-            parts = re.split(r'(?:answer|a):', response, flags=re.IGNORECASE, maxsplit=1)
-            if parts:
-                question_text = parts[0].replace("Question:", "").replace("Q:", "").strip()
-                if len(parts) > 1:
-                    answer_parts = re.split(r'(?:explanation|explain):', parts[1], flags=re.IGNORECASE, maxsplit=1)
-                    answer_text = answer_parts[0].strip()
-                    if len(answer_parts) > 1:
-                        explanation = answer_parts[1].strip()
+        # Extract question
+        question_match = re.search(r'(?:question|q)[:\s]+([^\n]+(?:\n(?!\s*[A-D][\)\.])[^\n]+)*)', response, re.IGNORECASE)
+        if question_match:
+            question_text = question_match.group(1).strip()
+        else:
+            # Fallback: everything before first choice or answer
+            parts = re.split(r'(?:answer|choices?|a\)|b\)|c\)|d\)):', response, flags=re.IGNORECASE, maxsplit=1)
+            question_text = parts[0].replace("Question:", "").replace("Q:", "").strip()
+        
+        # Extract explanation
+        explanation_match = re.search(r'(?:explanation|explain|why)[:\s]+([^\n]+(?:\n[^\n]+)*)', response, re.IGNORECASE)
+        if explanation_match:
+            explanation = explanation_match.group(1).strip()
+        else:
+            explanation = "See your tutor for explanation."
+        
+        # Ensure we have 4 choices
+        if len(choices) < 4:
+            choices, correct_answer = self._generate_multiple_choice_options(answer_text or "See explanation", response)
+            # Extract answer text from the correct choice
+            for choice in choices:
+                if choice.startswith(f"{correct_answer})"):
+                    answer_text = choice.replace(f"{correct_answer}) ", "")
+                    break
         
         return {
             "question_text": question_text or response[:200],
-            "answer_text": answer_text or "See explanation",
+            "choices": choices[:4],
+            "correct_answer": correct_answer or "A",
+            "answer_text": answer_text or choices[0].replace("A) ", "") if choices else "See explanation",
             "explanation": explanation or response
         }
+    
+    def _extract_answer(self, response: str) -> str:
+        """Extract answer from response"""
+        answer_match = re.search(r'(?:answer|correct|right)[:\s]+([^\n]+)', response, re.IGNORECASE)
+        if answer_match:
+            return answer_match.group(1).strip()
+        return ""
+    
+    def _generate_multiple_choice_options(self, correct_answer: str, context: str = "") -> List[str]:
+        """Generate 4 multiple choice options with correct answer randomly placed"""
+        # Create distractors
+        distractors = [
+            "A related but incorrect option",
+            "Another plausible but wrong answer",
+            "An incorrect alternative"
+        ]
+        
+        # Combine correct answer with distractors
+        all_options = [correct_answer] + distractors
+        random.shuffle(all_options)
+        
+        # Format as A, B, C, D
+        letters = ["A", "B", "C", "D"]
+        options = [f"{letter}) {option}" for letter, option in zip(letters, all_options)]
+        
+        # Find which letter has the correct answer
+        correct_letter = None
+        for i, option in enumerate(all_options):
+            if option == correct_answer:
+                correct_letter = letters[i]
+                break
+        
+        return options, correct_letter or "A"
+    
+    def _add_multiple_choice_format(self, item: Dict) -> Dict:
+        """Add multiple choice format to item if missing"""
+        if "choices" not in item or not isinstance(item.get("choices"), list):
+            answer = item.get("answer_text", "See explanation")
+            choices, correct_letter = self._generate_multiple_choice_options(answer)
+            item["choices"] = choices
+            item["correct_answer"] = correct_letter
+            # Update answer_text to match the correct choice
+            for choice in choices:
+                if choice.startswith(f"{correct_letter})"):
+                    item["answer_text"] = choice.replace(f"{correct_letter}) ", "")
+                    break
+        return item
 

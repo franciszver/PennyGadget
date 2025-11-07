@@ -15,7 +15,6 @@ class StudentProgressSummary(BaseModel):
     practice: Dict
     sessions: Dict
     qa: Dict
-    gamification: Dict
     last_activity: Optional[str] = None
 
 

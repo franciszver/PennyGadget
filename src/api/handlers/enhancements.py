@@ -9,6 +9,7 @@ from typing import Optional, List, Dict
 from datetime import datetime
 
 from src.config.database import get_db
+from src.config.settings import settings
 from src.api.middleware.auth import get_current_user, require_role
 from src.services.notifications.email import EmailService
 from src.services.qa.conversation_history import ConversationHistory
@@ -32,7 +33,42 @@ async def get_conversation_history(
     Get conversation history for a student
     
     Returns recent Q&A interactions for context
+    
+    Security: Students can only access their own history. Tutors/admins can access any student's history.
     """
+    from uuid import UUID
+    
+    # Get authenticated user from database
+    user_sub = current_user.get("sub")
+    db_user = db.query(User).filter(User.cognito_sub == user_sub).first()
+    
+    if not db_user:
+        # Development mode: Support mock tokens
+        if settings.environment == "development" and user_sub == "demo-user":
+            # In dev mode, verify the student_id exists
+            target_student = db.query(User).filter(User.id == UUID(student_id)).first()
+            if not target_student:
+                raise HTTPException(status_code=404, detail="Student not found")
+        else:
+            raise HTTPException(status_code=404, detail="User not found")
+    else:
+        # Verify student_id exists
+        target_student = db.query(User).filter(User.id == UUID(student_id)).first()
+        if not target_student:
+            raise HTTPException(status_code=404, detail="Student not found")
+        
+        # Authorization check: Students can only access their own history
+        # Tutors and admins can access any student's history
+        user_role = db_user.role
+        if user_role == "student":
+            # Student can only access their own history
+            if str(db_user.id) != student_id:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Access denied: You can only view your own conversation history"
+                )
+        # Tutors and admins can access any student's history (for support purposes)
+    
     conversation_history = ConversationHistory(db)
     
     history = conversation_history.get_recent_conversation(
@@ -126,15 +162,12 @@ async def send_weekly_progress_email(
     aggregator = AnalyticsAggregator(db)
     progress = aggregator.get_student_progress_summary(student_id)
     
-    # Get gamification data
-    gamification = student.gamification or {}
+    # Gamification removed
     
     progress_data = {
         "sessions": progress["sessions"]["recent_30_days"],
         "practice_completed": progress["practice"]["recent_30_days"],
-        "goals_completed": progress["goals"]["completed"],
-        "level": gamification.get("level", 1),
-        "xp_earned": gamification.get("total_xp_earned", 0)
+        "goals_completed": progress["goals"]["completed"]
     }
     
     email_service = EmailService(db)

@@ -12,6 +12,7 @@ from src.config.database import get_db
 from src.api.middleware.auth import get_current_user
 from src.models.goal import Goal
 from src.models.user import User
+from src.models.practice import StudentRating
 from src.config.settings import settings
 import logging
 
@@ -107,11 +108,14 @@ async def get_progress(
     ).all()
     
     # Get recently completed goals (last 30 days) for suggestions
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timezone
+    # Use timezone-aware datetime for comparison
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=30)
     recent_completed = db.query(Goal).filter(
         Goal.student_id == user_id,
         Goal.status == "completed",
-        Goal.completed_at >= datetime.utcnow() - timedelta(days=30)
+        Goal.completed_at.isnot(None),
+        Goal.completed_at >= cutoff_date
     ).all()
     
     all_goals = active_goals + recent_completed
@@ -119,8 +123,8 @@ async def get_progress(
     # Check if first login (disclaimer not shown)
     disclaimer_required = not db_user.disclaimer_shown
     
-    # Handle no goals scenario
-    if not active_goals:
+    # Handle no goals scenario (only if no active AND no completed goals)
+    if not active_goals and not recent_completed:
         return {
             "success": True,
             "data": {
@@ -191,24 +195,50 @@ async def get_progress(
                 "subjects": ["Algebra", "Geometry", "Calculus"]
             })
     
+    # Combine active and recently completed goals for display
+    all_goals_for_display = active_goals + recent_completed
+    
+    # Get Elo ratings for each goal's subject
+    goals_with_ratings = []
+    for g in all_goals_for_display:
+        goal_data = {
+            "goal_id": str(g.id),
+            "subject": g.subject.name if g.subject else "Unknown",
+            "goal_type": g.goal_type,
+            "title": g.title,
+            "completion_percentage": float(g.completion_percentage),
+            "current_streak": g.current_streak,
+            "xp_earned": g.xp_earned,
+            "status": g.status,
+            "target_date": str(g.target_completion_date) if g.target_completion_date else None,
+            "completed_at": str(g.completed_at) if g.completed_at else None
+        }
+        
+        # Get Elo rating for this goal's subject
+        if g.subject_id:
+            rating = db.query(StudentRating).filter(
+                StudentRating.student_id == user_id,
+                StudentRating.subject_id == g.subject_id
+            ).first()
+            
+            if rating:
+                goal_data["elo_rating"] = rating.rating
+                goal_data["elo_rating_updated"] = str(rating.last_updated) if rating.last_updated else None
+            else:
+                # No rating yet - use default
+                goal_data["elo_rating"] = settings.elo_default_rating
+                goal_data["elo_rating_updated"] = None
+        else:
+            goal_data["elo_rating"] = None
+            goal_data["elo_rating_updated"] = None
+        
+        goals_with_ratings.append(goal_data)
+    
     return {
         "success": True,
         "data": {
             "user_id": str(user_id),
-            "goals": [
-                {
-                    "goal_id": str(g.id),
-                    "subject": g.subject.name if g.subject else "Unknown",
-                    "goal_type": g.goal_type,
-                    "title": g.title,
-                    "completion_percentage": float(g.completion_percentage),
-                    "current_streak": g.current_streak,
-                    "xp_earned": g.xp_earned,
-                    "status": g.status,
-                    "target_date": str(g.target_completion_date) if g.target_completion_date else None
-                }
-                for g in active_goals
-            ],
+            "goals": goals_with_ratings,
             "insights": insights,
             "suggestions": suggestions,
             "disclaimer_required": disclaimer_required,

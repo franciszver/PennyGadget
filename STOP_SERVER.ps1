@@ -9,11 +9,11 @@ Write-Host "Finding processes on port 8000..." -ForegroundColor Cyan
 $processes = Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique
 
 if ($processes) {
-    foreach ($pid in $processes) {
-        $proc = Get-Process -Id $pid -ErrorAction SilentlyContinue
+    foreach ($processId in $processes) {
+        $proc = Get-Process -Id $processId -ErrorAction SilentlyContinue
         if ($proc) {
-            Write-Host "Stopping process: $($proc.ProcessName) (PID: $pid)" -ForegroundColor Yellow
-            Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+            Write-Host "Stopping process: $($proc.ProcessName) (PID: $processId)" -ForegroundColor Yellow
+            Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
         }
     }
     Write-Host "[OK] Stopped all processes on port 8000" -ForegroundColor Green
