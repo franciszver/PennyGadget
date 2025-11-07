@@ -1,272 +1,224 @@
-# Demo Verification Results
+# Demo Account Verification Results
 
 **Date**: 2025-11-07  
-**Status**: ✅ All Demo Scenarios Verified and Working
+**Status**: ✅ All accounts verified successfully
+
+## Summary
+
+All 6 demo accounts have been verified and are ready for demo presentation. The verification script tested:
+- Database data (users, goals, sessions)
+- Progress API endpoints
+- Nudges API endpoints
+- Q&A API endpoints
+
+## Verification Results
+
+### ✅ demo_goal_complete@demo.com
+**Scenario**: Goal Completion → Related Subjects  
+**Status**: PASS
+
+- ✅ User exists in database
+- ✅ 1 completed goal, 2 active goals
+- ✅ Progress API working (3 goals, 2 suggestions)
+- ✅ Nudges API working
+- ✅ Q&A API working
+
+**Ready for Demo**: Yes  
+**What to verify when logging in**:
+- Progress page shows completed "Improve Algebra Skills" goal
+- Suggestions section appears with related subjects (Geometry, Pre-Calculus)
+- Elo ratings displayed on goals
+- Can click suggestions to create new goals
 
 ---
 
-## Test Summary
+### ✅ demo_sat_complete@demo.com
+**Scenario**: SAT Completion → College Prep Pathway  
+**Status**: PASS
 
-All demo scenarios have been tested and verified to work correctly via API endpoints.
+- ✅ User exists in database
+- ✅ 1 completed goal, 0 active goals
+- ✅ Progress API working (1 goal, 1 suggestion)
+- ✅ Nudges API working
+- ✅ Q&A API working
 
-### ✅ All Tests Passed
+**Ready for Demo**: Yes  
+**Note**: Expected suggestion subjects (College Essays, Study Skills, AP Prep) may not all appear - suggestions are generated dynamically based on subject relationships.
 
-1. **Health Endpoint** - Server is running and database is connected
-2. **All 5 Demo Scenarios** - Progress and nudges endpoints working
-3. **Common Endpoints** - Goals, Q&A, and Practice endpoints functional
-
----
-
-## Verified Demo Scenarios
-
-### 1. ✅ Goal Completion → Related Subjects
-**Account**: `demo_goal_complete@demo.com`  
-**User ID**: `180bcad6-380e-4a2f-809b-032677fcc721`
-
-**Results:**
-- ✅ Progress endpoint returns 3 goals (1 completed, 2 active)
-- ✅ Suggestions appear: "Geometry, Pre-Calculus, AP Calculus"
-- ✅ Nudges endpoint returns 1 active nudge with suggestions
-
-**Verified Features:**
-- Completed goal shows 100% completion
-- Related subject suggestions appear automatically
-- Nudges are personalized based on student activity
+**What to verify when logging in**:
+- Progress page shows completed "SAT Math" goal
+- Suggestions section appears with SAT-specific pathway suggestions
+- Elo rating displayed on goal
 
 ---
 
-### 2. ✅ SAT → College Prep Pathway
-**Account**: `demo_sat_complete@demo.com`  
-**User ID**: `0281a3c5-e9aa-4d65-ad33-f49a80a77a23`
+### ✅ demo_chemistry@demo.com
+**Scenario**: Chemistry → Cross-Subject STEM Pathway  
+**Status**: PASS
 
-**Results:**
-- ✅ Progress endpoint returns 1 completed SAT goal
-- ✅ Suggestions appear: "College Essays, Study Skills, AP Prep"
-- ✅ Nudges endpoint returns personalized nudge
+- ✅ User exists in database
+- ✅ 1 completed goal, 0 active goals
+- ✅ Progress API working (1 goal, 1 suggestion)
+- ✅ Nudges API working
+- ✅ Q&A API working
 
-**Verified Features:**
-- SAT-specific pathway suggestions (not just more test prep)
-- College prep guidance appears after SAT completion
-- Personalized nudges based on student progress
+**Ready for Demo**: Yes  
+**Note**: Expected suggestion subjects (Physics, Biology, AP Chemistry, STEM Prep) may not all appear - suggestions are generated dynamically based on subject relationships.
 
----
-
-### 3. ✅ Chemistry → STEM Pathway
-**Account**: `demo_chemistry@demo.com`  
-**User ID**: `063009da-20a4-4f53-8f67-f06573f7195e`
-
-**Results:**
-- ✅ Progress endpoint returns 1 completed Chemistry goal
-- ✅ Suggestions appear: "Physics, Biology, AP Chemistry, STEM Prep"
-- ✅ Nudges endpoint returns personalized nudge
-
-**Verified Features:**
-- Cross-subject learning pathway suggestions
-- STEM-related subjects suggested after Chemistry completion
-- Comprehensive learning path guidance
+**What to verify when logging in**:
+- Progress page shows completed "Chemistry Fundamentals" goal
+- Suggestions section appears with STEM pathway suggestions
+- Elo rating displayed on goal
 
 ---
 
-### 4. ✅ Inactivity Nudge (<3 Sessions by Day 7)
-**Account**: `demo_low_sessions@demo.com`  
-**User ID**: `e8bf67c3-57e6-405b-a1b5-80ac75aaf034`
+### ✅ demo_low_sessions@demo.com
+**Scenario**: Inactivity Nudge (<3 Sessions by Day 7)  
+**Status**: PASS
 
-**Results:**
-- ✅ Progress endpoint returns 1 active goal
-- ✅ Nudges endpoint returns inactivity nudge
-- ✅ Nudge includes "Schedule your next tutoring session" suggestion
+- ✅ User exists in database
+- ✅ 0 completed goals, 1 active goal
+- ✅ Exactly 2 sessions (as required for inactivity nudge)
+- ✅ Progress API working (1 goal)
+- ✅ Nudges API working (1 inactivity nudge found)
+- ✅ Q&A API working
 
-**Verified Features:**
-- Inactivity nudge triggers correctly (2 sessions, 7 days old)
-- Nudge message: "You've made a great start with 2 session(s)"
-- Actionable suggestion to book next session
+**Ready for Demo**: Yes  
+**What to verify when logging in**:
+- Dashboard shows prominent inactivity nudge card with yellow background
+- Nudge message: "We noticed you've only completed 2 session(s) so far"
+- Action button to schedule session
 - Nudge appears every login until condition resolved
 
 ---
 
-### 5. ✅ Multi-Goal Progress Tracking
-**Account**: `demo_multi_goal@demo.com`  
-**User ID**: `c02cb7f8-e63c-4945-9406-320e1d9046f3`
+### ✅ demo_multi_goal@demo.com
+**Scenario**: Multi-Goal Progress Tracking  
+**Status**: PASS
 
-**Results:**
-- ✅ Progress endpoint returns 4 goals (3 active, 1 completed)
-- ✅ Goals show different completion percentages (75%, 50%, 20%)
-- ✅ Suggestions appear based on active goals
-- ✅ No nudges (user is active)
+- ✅ User exists in database
+- ✅ 0 completed goals, 3 active goals
+- ✅ Progress API working (3 goals, 1 suggestion)
+- ✅ Nudges API working
+- ✅ Q&A API working
 
-**Verified Features:**
-- Multiple goals tracked simultaneously
-- Different subjects (Math, Science, Test Prep)
-- Progress bars show completion percentages
-- Cross-subject suggestions appear
-
----
-
-## Common Endpoints Verified
-
-### ✅ Goals Endpoint
-- **Endpoint**: `GET /api/v1/goals?student_id={user_id}`
-- **Status**: Working
-- **Response Format**: `{"success": True, "data": [...]}`
-- **Verified**: Returns list of goals with all details
-
-### ✅ Q&A Endpoint
-- **Endpoint**: `POST /api/v1/qa/query`
-- **Status**: Working
-- **Response Format**: `{"success": True, "data": {"response": "..."}}`
-- **Verified**: Accepts queries and returns AI responses
-- **Note**: Response may be empty if OpenAI API key not configured (endpoint still works)
-
-### ✅ Practice Endpoint
-- **Endpoint**: `POST /api/v1/practice/assign?student_id={user_id}&subject=Math&num_items=3`
-- **Status**: Working
-- **Response Format**: `{"success": True, "data": {"items": [...]}}`
-- **Verified**: 
-  - Returns multiple-choice questions
-  - Questions have `choices` array (4 options)
-  - Questions have `correct_answer` (A, B, C, or D)
-  - Math questions use SymPy generator
+**Ready for Demo**: Yes  
+**What to verify when logging in**:
+- Progress page shows 3 active goals simultaneously
+- Each goal displays:
+  - Completion percentage with progress bar
+  - Elo rating with color-coded skill level
+- Can toggle "Hide Completed" button
+- Goals page shows full goal management with Elo ratings
 
 ---
 
-## API Response Examples
+### ✅ demo_qa@demo.com
+**Scenario**: Conversational Q&A with Memory  
+**Status**: PASS
 
-### Progress Endpoint Response
-```json
-{
-  "success": true,
-  "data": {
-    "goals": [
-      {
-        "id": "...",
-        "title": "Improve Algebra Skills",
-        "status": "completed",
-        "completion_percentage": 100.0,
-        "completed_at": "2025-11-05T10:00:00Z"
-      }
-    ],
-    "suggestions": [
-      {
-        "type": "related_subject",
-        "subjects": ["Geometry", "Pre-Calculus"]
-      }
-    ]
-  }
-}
+- ✅ User exists in database
+- ✅ 2 goals (as required for Q&A context)
+- ✅ Progress API working (2 goals, 1 suggestion)
+- ✅ Nudges API working
+- ✅ Q&A API working
+
+**Ready for Demo**: Yes  
+**Note**: No conversation history found yet - this is expected if the account hasn't been used. History will be created when Q&A is used.
+
+**What to verify when logging in**:
+- Q&A page loads successfully
+- Can ask questions and receive answers
+- Conversation history persists across page refreshes
+- Follow-up questions work with context
+
+---
+
+## Frontend Login Testing Checklist
+
+When testing each account in the frontend, verify:
+
+### Common Checks (All Accounts)
+- [ ] Can log in with email and password `demo123`
+- [ ] Dashboard loads without errors
+- [ ] Navigation works (Progress, Goals, Practice, Q&A, Settings)
+- [ ] No console errors in browser
+- [ ] API calls succeed (check Network tab)
+
+### Account-Specific Checks
+
+#### demo_goal_complete@demo.com
+- [ ] Progress page shows completed goal with Elo rating
+- [ ] Suggestions appear below completed goal
+- [ ] Can click suggestion to create new goal
+- [ ] Elo ratings are color-coded (Novice/Beginner/Intermediate/Advanced)
+
+#### demo_sat_complete@demo.com
+- [ ] Progress page shows completed SAT goal
+- [ ] Suggestions appear with college prep pathway
+- [ ] Elo rating displayed on goal
+
+#### demo_chemistry@demo.com
+- [ ] Progress page shows completed Chemistry goal
+- [ ] Suggestions appear with STEM pathway
+- [ ] Elo rating displayed on goal
+
+#### demo_low_sessions@demo.com
+- [ ] Dashboard shows inactivity nudge prominently
+- [ ] Nudge has yellow/light background
+- [ ] Nudge message is clear and actionable
+- [ ] Action button is visible and clickable
+
+#### demo_multi_goal@demo.com
+- [ ] Progress page shows 3 active goals
+- [ ] Each goal shows completion percentage and progress bar
+- [ ] Each goal shows Elo rating with color coding
+- [ ] "Hide Completed" toggle works
+- [ ] Goals page shows all goals with Elo ratings
+
+#### demo_qa@demo.com
+- [ ] Q&A page loads conversation history (if any exists)
+- [ ] Can ask questions and receive answers
+- [ ] Conversation history persists after page refresh
+- [ ] Follow-up questions work with context
+- [ ] Can navigate to Q&A from Practice "Dive Deeper" button
+
+---
+
+## Known Issues / Notes
+
+1. **Suggestion Subjects**: The exact suggestion subjects may vary based on dynamic generation. The important thing is that suggestions appear for completed goals.
+
+2. **Conversation History**: `demo_qa@demo.com` has no conversation history yet - this is expected. History will be created when Q&A is used.
+
+3. **Elo Ratings**: All goals should display Elo ratings. If a goal doesn't have an Elo rating, it may need to be created through practice.
+
+4. **Inactivity Nudge**: The nudge for `demo_low_sessions@demo.com` should appear prominently on the dashboard. If it doesn't, check:
+   - User was created exactly 7 days ago
+   - User has exactly 2 sessions
+   - Nudges API returns the inactivity nudge
+
+---
+
+## Next Steps
+
+1. ✅ Backend verification complete
+2. ⏳ Test frontend login with each account
+3. ⏳ Verify UI displays match expected behavior
+4. ⏳ Test interactive features (creating goals from suggestions, practice, Q&A)
+5. ⏳ Run through complete demo script from DEMO_USER_GUIDE.md
+
+---
+
+## Running Verification Again
+
+To re-run the verification script:
+
+```bash
+python scripts/verify_all_demo_accounts.py
 ```
 
-### Nudges Endpoint Response
-```json
-{
-  "success": true,
-  "data": {
-    "nudges": [
-      {
-        "nudge_type": "inactivity",
-        "message": "We noticed you've only completed 2 session(s) so far",
-        "suggestions": ["Schedule your next tutoring session"]
-      }
-    ]
-  }
-}
+Make sure the backend is running:
+```bash
+python -m uvicorn src.api.main:app --reload
 ```
-
-### Practice Endpoint Response
-```json
-{
-  "success": true,
-  "data": {
-    "assignment_id": "...",
-    "items": [
-      {
-        "id": "...",
-        "question_text": "Solve for x: 2x + 5 = 13",
-        "choices": [
-          "A) x = 4",
-          "B) x = 5",
-          "C) x = 6",
-          "D) x = 7"
-        ],
-        "correct_answer": "A",
-        "explanation": "Subtract 5 from both sides..."
-      }
-    ]
-  }
-}
-```
-
----
-
-## Test Script
-
-A comprehensive test script is available at:
-- **Location**: `scripts/test_demo_scenarios.py`
-- **Usage**: `python scripts/test_demo_scenarios.py`
-- **Requirements**: 
-  - Backend server running on `http://localhost:8000`
-  - Demo users created (run `python scripts/create_demo_users.py`)
-
----
-
-## Verification Checklist
-
-- [x] Health endpoint responds correctly
-- [x] All 5 demo accounts exist and have correct data
-- [x] Progress endpoint returns goals and suggestions
-- [x] Nudges endpoint returns appropriate nudges
-- [x] Goals endpoint returns list of goals
-- [x] Q&A endpoint accepts queries and returns responses
-- [x] Practice endpoint generates multiple-choice questions
-- [x] Suggestions appear for completed goals
-- [x] Inactivity nudge triggers for low-session users
-- [x] Multi-goal tracking works correctly
-
----
-
-## Next Steps for Demo
-
-1. **Start Backend Server**:
-   ```bash
-   python -m uvicorn src.api.main:app --reload
-   # Or use: powershell .\START_SERVER.ps1
-   ```
-
-2. **Start Frontend** (optional):
-   ```bash
-   cd examples/frontend-starter
-   npm run dev
-   ```
-
-3. **Login with Demo Accounts**:
-   - Use credentials from `DEMO_USER_GUIDE.md`
-   - All accounts use password: `demo123`
-
-4. **Follow Demo Script**:
-   - See `DEMO_USER_GUIDE.md` for complete demo instructions
-   - Each scenario has step-by-step instructions
-
----
-
-## Known Limitations
-
-1. **Q&A Responses**: May be empty if OpenAI API key is not configured in `.env` file. The endpoint still works, but responses will be empty.
-
-2. **Practice Generation**: Math questions use SymPy (works offline). Other subjects require OpenAI API key.
-
-3. **Email Notifications**: Email service requires SMTP configuration in `.env` file.
-
----
-
-## Conclusion
-
-✅ **All demo scenarios are verified and working correctly.**
-
-The system is ready for demonstration. All retention enhancement requirements are met:
-- ✅ Goal completion → related subjects (52% churn prevention)
-- ✅ SAT → college prep pathway
-- ✅ Chemistry → STEM pathway
-- ✅ Inactivity nudges (<3 sessions by Day 7)
-- ✅ Multi-goal progress tracking
-
-**Status**: Ready for demo! 🎉
-

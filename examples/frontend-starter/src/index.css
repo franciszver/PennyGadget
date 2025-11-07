@@ -11,3 +11,9 @@ code {
     monospace;
 }
 
+/* ElevareAI Global Styles */
+#root {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #F5F7FA 0%, #FAFBFC 100%);
+}
+

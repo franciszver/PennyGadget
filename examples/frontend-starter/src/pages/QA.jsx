@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { api } from '../services/apiClient';
 import LoadingSpinner from '../components/LoadingSpinner';
+import ReactMarkdown from 'react-markdown';
 import './QA.css';
 
 function QA() {
@@ -15,6 +16,7 @@ function QA() {
   const [conversation, setConversation] = useState([]);
   const preloadSentRef = useRef(false); // Use ref to track if preload was sent (persists across re-renders)
   const historyLoadedRef = useRef(false); // Track if history has been loaded
+  const conversationEndRef = useRef(null); // Ref for scrolling to bottom
 
   const { success, error: showError } = useToast();
   
@@ -62,6 +64,16 @@ function QA() {
       }
     }
   }, [historyData, conversation.length]);
+
+  // Scroll to bottom when conversation updates or component mounts
+  useEffect(() => {
+    if (conversationEndRef.current) {
+      // Small delay to ensure DOM has updated
+      setTimeout(() => {
+        conversationEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 100);
+    }
+  }, [conversation, historyData]);
   
   // Check for preloaded query from Practice page
   const preloadedQuery = searchParams.get('preload');
@@ -195,14 +207,14 @@ function QA() {
   return (
     <div className="qa">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h1 style={{ margin: 0 }}>Ask a Question</h1>
+        <h1 style={{ margin: 0 }}>Curious about something? <span className="inspirational">Let's explore deeper.</span></h1>
         {returnTo === 'practice' && (
           <button
             onClick={handleReturnToPractice}
             style={{
               padding: '0.5rem 1rem',
               fontSize: '0.875rem',
-              backgroundColor: '#28a745',
+              backgroundColor: 'var(--secondary-color)',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -241,7 +253,7 @@ function QA() {
         {conversation.length === 0 && !queryMutation.isPending && !preloadedQuery && !historyLoading && (
           <div className="qa-empty">
             <p>Start a conversation by asking a question below!</p>
-            <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
               Try: "How do I solve quadratic equations?" or "Explain photosynthesis"
             </p>
             {historyData?.data?.count === 0 && (
@@ -266,7 +278,56 @@ function QA() {
         )}
         {conversation.map((msg, idx) => (
           <div key={idx} className={`qa-message ${msg.type}`}>
-            <div className="qa-content">{msg.content}</div>
+            <div className="qa-content">
+              {msg.type === 'assistant' ? (
+                <ReactMarkdown
+                  components={{
+                    // Style code blocks
+                    code: ({ node, inline, className, children, ...props }) => {
+                      if (inline) {
+                        return (
+                          <code className="qa-inline-code" {...props}>
+                            {children}
+                          </code>
+                        );
+                      }
+                      return (
+                        <pre className="qa-code-block">
+                          <code className={className} {...props}>
+                            {children}
+                          </code>
+                        </pre>
+                      );
+                    },
+                    // Style paragraphs
+                    p: ({ children }) => <p className="qa-paragraph">{children}</p>,
+                    // Style lists
+                    ul: ({ children }) => <ul className="qa-list">{children}</ul>,
+                    ol: ({ children }) => <ol className="qa-list">{children}</ol>,
+                    li: ({ children }) => <li className="qa-list-item">{children}</li>,
+                    // Style headings
+                    h1: ({ children }) => <h1 className="qa-heading qa-h1">{children}</h1>,
+                    h2: ({ children }) => <h2 className="qa-heading qa-h2">{children}</h2>,
+                    h3: ({ children }) => <h3 className="qa-heading qa-h3">{children}</h3>,
+                    // Style blockquotes
+                    blockquote: ({ children }) => <blockquote className="qa-blockquote">{children}</blockquote>,
+                    // Style links
+                    a: ({ children, href }) => (
+                      <a href={href} className="qa-link" target="_blank" rel="noopener noreferrer">
+                        {children}
+                      </a>
+                    ),
+                    // Style strong and emphasis
+                    strong: ({ children }) => <strong className="qa-strong">{children}</strong>,
+                    em: ({ children }) => <em className="qa-emphasis">{children}</em>,
+                  }}
+                >
+                  {msg.content}
+                </ReactMarkdown>
+              ) : (
+                <p className="qa-user-message">{msg.content}</p>
+              )}
+            </div>
             {msg.confidence && (
               <div className="qa-confidence">
                 Confidence: <span className={`confidence-${msg.confidence.toLowerCase()}`}>
@@ -276,6 +337,8 @@ function QA() {
             )}
           </div>
         ))}
+        {/* Invisible element at the bottom for scrolling */}
+        <div ref={conversationEndRef} style={{ height: '1px' }} />
       </div>
 
       <form onSubmit={handleSubmit} className="qa-form">

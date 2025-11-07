@@ -1,8 +1,8 @@
 .navbar {
   background: #fff;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--border-light);
   padding: 0 2rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: var(--shadow-soft);
 }
 
 .navbar-container {
@@ -11,18 +11,37 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 60px;
+  height: 70px;
 }
 
 .navbar-brand {
-  font-size: 1.25rem;
-  font-weight: bold;
-  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   text-decoration: none;
+  transition: transform 0.2s ease;
 }
 
 .navbar-brand:hover {
-  color: #007bff;
+  transform: translateY(-1px);
+}
+
+.navbar-logo {
+  width: 40px;
+  height: 40px;
+  transition: transform 0.3s ease;
+}
+
+.navbar-brand:hover .navbar-logo {
+  transform: scale(1.05);
+}
+
+.navbar-brand-text {
+  font-family: 'Merriweather', serif;
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: var(--primary-color);
+  letter-spacing: -0.01em;
 }
 
 .navbar-links {
@@ -32,14 +51,17 @@
 }
 
 .navbar-links a {
-  color: #666;
+  color: var(--text-secondary);
   text-decoration: none;
   font-weight: 500;
-  transition: color 0.2s;
+  transition: all 0.2s ease;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--border-radius-sm);
 }
 
 .navbar-links a:hover {
-  color: #007bff;
+  color: var(--primary-color);
+  background: var(--primary-light);
 }
 
 .navbar-user {
@@ -48,37 +70,44 @@
   gap: 1rem;
   margin-left: 1rem;
   padding-left: 1rem;
-  border-left: 1px solid #e0e0e0;
+  border-left: 1px solid var(--border-light);
 }
 
 .navbar-settings {
-  color: #666;
+  color: var(--text-secondary);
   text-decoration: none;
   font-size: 0.875rem;
-  transition: color 0.2s;
+  transition: color 0.2s ease;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--border-radius-sm);
 }
 
 .navbar-settings:hover {
-  color: #007bff;
+  color: var(--primary-color);
+  background: var(--primary-light);
 }
 
 .navbar-user span {
-  color: #666;
+  color: var(--text-secondary);
   font-size: 0.875rem;
 }
 
 .logout-btn {
   padding: 0.5rem 1rem;
-  background: #dc3545;
+  background: var(--accent-color);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--border-radius-sm);
   cursor: pointer;
   font-size: 0.875rem;
-  transition: background 0.2s;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-soft);
 }
 
 .logout-btn:hover {
-  background: #c82333;
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
 }
 

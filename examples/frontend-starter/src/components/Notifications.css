@@ -17,7 +17,7 @@
 }
 
 .notifications-bell:hover {
-  color: #007bff;
+  color: var(--primary-color);
 }
 
 .notifications-bell svg {
@@ -29,7 +29,7 @@
   position: absolute;
   top: 0;
   right: 0;
-  background: #dc3545;
+  background: var(--accent-color);
   color: white;
   border-radius: 50%;
   width: 18px;
@@ -40,7 +40,7 @@
   align-items: center;
   justify-content: center;
   border: 2px solid white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-soft);
 }
 
 .notifications-popup {
@@ -75,7 +75,7 @@
 }
 
 .notifications-count {
-  background: #007bff;
+  background: var(--primary-color);
   color: white;
   padding: 0.25rem 0.5rem;
   border-radius: 12px;

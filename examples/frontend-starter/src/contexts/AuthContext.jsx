@@ -41,16 +41,79 @@ export function AuthProvider({ children }) {
       let emailToCheck = userEmail;
       if (!emailToCheck && userId.startsWith('user-')) {
         // Infer email from fake ID format: user-demo_qa-demo-com -> demo_qa@demo.com
-        // Remove 'user-' prefix and split by '-'
-        const parts = userId.replace('user-', '').split('-');
-        if (parts.length >= 3) {
-          // Last two parts are 'demo' and 'com', rest is the email prefix
-          const emailPrefix = parts.slice(0, -2).join('_'); // Handle underscores in email
-          emailToCheck = `${emailPrefix}@${parts[parts.length - 2]}.${parts[parts.length - 1]}`;
-        } else if (parts.length === 2) {
-          // Simple case: user-demo_qa-demo-com -> demo_qa@demo.com
-          emailToCheck = `${parts[0]}@${parts[1]}.com`;
+        // The fake ID format is: user-{email_prefix}-{domain_part1}-{domain_part2}
+        // Where email_prefix has underscores converted to hyphens
+        // Example: demo_low_sessions@demo.com -> user-demo_low_sessions-demo-com
+        // But the conversion might lose the 's', so we need to check all possible variations
+        
+        // Remove 'user-' prefix
+        const idWithoutPrefix = userId.replace('user-', '');
+        
+        // Try to match against known demo accounts by checking if any email
+        // when converted to fake ID format matches this ID
+        // Handle variations where underscores might be converted to hyphens inconsistently
+        for (const [email, uuid] of Object.entries(demoAccountIds)) {
+          // Convert email to fake ID format: demo_low_sessions@demo.com -> demo_low_sessions-demo-com
+          const fakeIdFromEmail = 'user-' + email.replace('@', '-').replace(/\./g, '-');
+          
+          // Also try with underscores converted to hyphens
+          const emailPrefix = email.split('@')[0];
+          const emailDomain = email.split('@')[1];
+          const fakeIdWithHyphens = 'user-' + emailPrefix.replace(/_/g, '-') + '-' + emailDomain.replace(/\./g, '-');
+          
+          // Check for exact match or if the fake ID contains the email prefix (with variations)
+          // Handle cases where underscores/hyphens are mixed and plural/singular variations
+          const emailPrefixHyphenated = emailPrefix.replace(/_/g, '-');
+          const emailPrefixWithUnderscores = emailPrefix; // Keep original with underscores
+          
+          // Create variations to match against
+          const variations = [
+            emailPrefixHyphenated, // demo-low-sessions
+            emailPrefixHyphenated + 's', // demo-low-sessionss (in case 's' was dropped)
+            emailPrefixHyphenated.replace(/s$/, ''), // demo-low-session (remove trailing 's')
+            emailPrefixWithUnderscores, // demo_low_sessions
+            emailPrefixWithUnderscores + 's', // demo_low_sessionss
+            emailPrefixWithUnderscores.replace(/s$/, ''), // demo_low_session
+          ];
+          
+          // Check if any variation matches the fake ID
+          const matches = fakeIdFromEmail === userId || 
+              fakeIdWithHyphens === userId ||
+              variations.some(variation => {
+                // Check if fake ID starts with or contains the variation
+                return idWithoutPrefix.startsWith(variation) || 
+                       idWithoutPrefix.includes(variation) ||
+                       variation.includes(idWithoutPrefix.split('-')[0]); // Partial match on first part
+              });
+          
+          if (matches) {
+            emailToCheck = email;
+            console.log('[AUTH] Matched fake ID to email:', email, '(checked variations:', variations.length, ')');
+            break;
+          }
         }
+        
+        // If no match found, try the old inference method
+        if (!emailToCheck) {
+          const parts = idWithoutPrefix.split('-');
+          if (parts.length >= 3) {
+            // Last two parts are domain parts, rest is the email prefix
+            // But we need to be careful - underscores in email become hyphens
+            // So we need to check all possible combinations
+            const domainPart = parts.slice(-2).join('.');
+            const possiblePrefixes = [parts.slice(0, -2).join('_')]; // Try with underscores
+            
+            // Also try variations if the last part of prefix might have been split
+            for (const prefix of possiblePrefixes) {
+              const testEmail = `${prefix}@${domainPart}`;
+              if (demoAccountIds[testEmail]) {
+                emailToCheck = testEmail;
+                break;
+              }
+            }
+          }
+        }
+        
         console.log('[AUTH] Inferred email from fake ID:', emailToCheck);
       }
       

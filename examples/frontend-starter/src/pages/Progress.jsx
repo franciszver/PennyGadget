@@ -36,7 +36,7 @@ function Progress() {
   const resetGoalMutation = useMutation({
     mutationFn: (goalId) => api.resetGoal(goalId),
     onSuccess: () => {
-      success('Goal reset successfully! You can now work on improving your Elo rating.');
+      success('Goal reset! You can now work on lifting your confidence score.');
       queryClient.invalidateQueries(['progress', user?.id]);
       queryClient.invalidateQueries(['goals', user?.id]);
     },
@@ -86,13 +86,13 @@ function Progress() {
   return (
     <div className="progress">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h1>Your Progress</h1>
+        <h1>Your Learning Journey</h1>
         {completedGoals.length > 0 && (
           <button
             onClick={() => setHideCompleted(!hideCompleted)}
             style={{
               padding: '0.5rem 1rem',
-              backgroundColor: hideCompleted ? '#007bff' : '#6c757d',
+              backgroundColor: hideCompleted ? 'var(--primary-color)' : 'var(--text-secondary)',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -143,7 +143,7 @@ function Progress() {
                         }}>
                           <span style={{ 
                             fontWeight: 'bold', 
-                            color: goal.elo_rating >= 1500 ? '#28a745' : goal.elo_rating >= 1200 ? '#007bff' : goal.elo_rating >= 800 ? '#ffc107' : '#dc3545',
+                            color: goal.elo_rating >= 1500 ? 'var(--secondary-color)' : goal.elo_rating >= 1200 ? 'var(--primary-color)' : goal.elo_rating >= 800 ? 'var(--warning-color)' : 'var(--accent-color)',
                             fontSize: '1rem'
                           }}>
                             Elo: {goal.elo_rating}
@@ -158,7 +158,7 @@ function Progress() {
                         </div>
                       )}
                       {goal.completion_percentage !== undefined && (
-                        <span style={{ fontWeight: 'bold', color: goal.status === 'completed' ? '#28a745' : '#007bff' }}>
+                        <span style={{ fontWeight: 'bold', color: goal.status === 'completed' ? 'var(--secondary-color)' : 'var(--primary-color)' }}>
                           {goal.completion_percentage}%
                         </span>
                       )}
@@ -170,7 +170,7 @@ function Progress() {
                         className="progress-fill" 
                         style={{ 
                           width: `${goal.completion_percentage}%`,
-                          backgroundColor: goal.status === 'completed' ? '#28a745' : '#007bff'
+                          backgroundColor: goal.status === 'completed' ? 'var(--secondary-color)' : 'var(--primary-color)'
                         }}
                       />
                     </div>
@@ -185,27 +185,27 @@ function Progress() {
                     <div style={{ 
                       marginTop: '0.75rem', 
                       padding: '0.75rem', 
-                      backgroundColor: '#fff3cd', 
-                      border: '1px solid #ffc107',
+                      backgroundColor: 'var(--bg-accent)', 
+                      border: '1px solid var(--primary-light)',
                       borderRadius: '4px',
                       fontSize: '0.875rem'
                     }}>
-                      <p style={{ margin: '0 0 0.5rem 0', color: '#856404', fontWeight: '500' }}>
-                        ⚠️ Your Elo rating is {goal.elo_rating < 800 ? 'Novice' : 'Beginner'} ({goal.elo_rating}). 
-                        Consider resetting this goal to practice more and improve your rating!
+                      <p style={{ margin: '0 0 0.5rem 0', color: 'var(--text-secondary)', fontWeight: '400' }}>
+                        💡 Your confidence score is {goal.elo_rating < 800 ? 'Novice' : 'Beginner'} ({goal.elo_rating}). 
+                        Want to lift it higher? Consider resetting this goal to practice more.
                       </p>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (window.confirm(`Reset "${goal.title}"? This will allow you to practice more and improve your Elo rating.`)) {
+                          if (window.confirm(`Reset "${goal.title}"? This will give you a fresh start to lift your confidence score.`)) {
                             resetGoalMutation.mutate(goal.goal_id);
                           }
                         }}
                         disabled={resetGoalMutation.isPending}
                         style={{
                           padding: '0.5rem 1rem',
-                          backgroundColor: '#ffc107',
-                          color: '#856404',
+                          backgroundColor: 'var(--accent-color)',
+                          color: 'white',
                           border: 'none',
                           borderRadius: '4px',
                           cursor: resetGoalMutation.isPending ? 'not-allowed' : 'pointer',
@@ -214,7 +214,7 @@ function Progress() {
                           opacity: resetGoalMutation.isPending ? 0.6 : 1
                         }}
                       >
-                        {resetGoalMutation.isPending ? 'Resetting...' : 'Reset Goal & Improve Elo'}
+                        {resetGoalMutation.isPending ? 'Resetting...' : 'Reset Goal & Lift Confidence'}
                       </button>
                     </div>
                   )}
@@ -222,7 +222,7 @@ function Progress() {
               ))}
             </ul>
           ) : (
-            <p>No goals yet. Create one to get started!</p>
+            <p>No goals yet. <span className="inspirational">Let's create one to begin your learning journey!</span></p>
           )}
         </div>
 
@@ -259,30 +259,52 @@ function Progress() {
           <div className="progress-section">
             <h2>Suggestions</h2>
             {progressData.suggestions.map((suggestion, idx) => (
-              <div key={idx} style={{ 
+              <div key={idx}               style={{ 
                 marginBottom: '1rem', 
-                padding: '1rem', 
-                backgroundColor: '#e7f3ff', 
-                borderRadius: '8px',
-                border: '1px solid #b3d9ff'
+                padding: '1.25rem', 
+                backgroundColor: 'var(--bg-accent)', 
+                borderRadius: 'var(--border-radius)',
+                border: '1px solid var(--primary-light)',
+                boxShadow: 'var(--shadow-soft)',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = 'var(--shadow)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = 'var(--shadow-soft)';
+                e.currentTarget.style.transform = 'translateY(0)';
               }}>
-                <p style={{ marginBottom: '0.5rem', fontWeight: '500' }}>
+                <p style={{ marginBottom: '0.5rem', fontWeight: '400', fontSize: '1.05rem' }}>
                   {suggestion.message}
                 </p>
                 {suggestion.subjects && suggestion.subjects.length > 0 && (
                   <div>
-                    <strong>Suggested Subjects:</strong>
+                    <strong style={{ color: 'var(--primary-color)' }}>Curious about these subjects?</strong>
                     <ul style={{ marginTop: '0.5rem', marginLeft: '1.5rem' }}>
                       {suggestion.subjects.map((subject, subIdx) => (
                         <li 
                           key={subIdx}
                           style={{ 
                             cursor: 'pointer', 
-                            color: '#007bff',
-                            textDecoration: 'underline',
-                            marginBottom: '0.25rem'
+                            color: 'var(--primary-color)',
+                            textDecoration: 'none',
+                            marginBottom: '0.5rem',
+                            padding: '0.5rem',
+                            borderRadius: 'var(--border-radius-sm)',
+                            transition: 'all 0.2s ease',
+                            display: 'inline-block'
                           }}
                           onClick={() => handleSuggestionClick(subject)}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'var(--primary-light)';
+                            e.currentTarget.style.textDecoration = 'underline';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.textDecoration = 'none';
+                          }}
                           title="Click to create a goal for this subject"
                         >
                           {subject}

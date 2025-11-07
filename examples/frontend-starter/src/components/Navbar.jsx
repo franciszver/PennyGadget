@@ -20,7 +20,8 @@ function Navbar() {
     <nav className="navbar">
       <div className="navbar-container">
         <Link to="/dashboard" className="navbar-brand">
-          AI Study Companion
+          <img src="/elevare-logo.svg" alt="ElevareAI" className="navbar-logo" />
+          <span className="navbar-brand-text">ElevareAI</span>
         </Link>
         <div className="navbar-links">
           <Link to="/dashboard">Dashboard</Link>

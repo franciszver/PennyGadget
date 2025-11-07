@@ -24,36 +24,150 @@
 }
 
 .qa-message.user {
-  background: #e3f2fd;
+  background: var(--primary-light);
   margin-left: 2rem;
+  border-radius: var(--border-radius-sm);
 }
 
 .qa-message.assistant {
-  background: #f5f5f5;
+  background: var(--bg-secondary);
   margin-right: 2rem;
+  border-radius: var(--border-radius-sm);
 }
 
 .qa-content {
   margin-bottom: 0.5rem;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.qa-content p {
+  margin: 0.5rem 0;
+}
+
+.qa-content p:first-child {
+  margin-top: 0;
+}
+
+.qa-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* User messages - simple text */
+.qa-user-message {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Markdown formatting for assistant messages */
+.qa-paragraph {
+  margin: 0.75rem 0;
+  line-height: 1.6;
+}
+
+.qa-heading {
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.qa-h1 {
+  font-size: 1.5rem;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 0.5rem;
+}
+
+.qa-h2 {
+  font-size: 1.25rem;
+}
+
+.qa-h3 {
+  font-size: 1.125rem;
+}
+
+.qa-list {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+}
+
+.qa-list-item {
+  margin: 0.5rem 0;
+  line-height: 1.6;
+}
+
+.qa-inline-code {
+  background: var(--bg-secondary);
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+  color: var(--accent-color);
+}
+
+.qa-code-block {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  padding: 1rem;
+  margin: 1rem 0;
+  overflow-x: auto;
+}
+
+.qa-code-block code {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+  color: var(--text-primary);
+  display: block;
+  white-space: pre;
+}
+
+.qa-blockquote {
+  border-left: 4px solid var(--primary-color);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.qa-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.qa-link:hover {
+  border-bottom-color: var(--primary-color);
+}
+
+.qa-strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.qa-emphasis {
+  font-style: italic;
 }
 
 .qa-confidence {
   font-size: 0.875rem;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .confidence-high {
-  color: #28a745;
+  color: var(--secondary-color);
   font-weight: bold;
 }
 
 .confidence-medium {
-  color: #ffc107;
+  color: var(--warning-color);
   font-weight: bold;
 }
 
 .confidence-low {
-  color: #dc3545;
+  color: var(--accent-color);
   font-weight: bold;
 }
 
@@ -65,27 +179,42 @@
 .qa-form input {
   flex: 1;
   padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  transition: all 0.3s ease;
+}
+
+.qa-form input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
 }
 
 .qa-form button {
   padding: 0.75rem 1.5rem;
-  background: #007bff;
+  background: var(--primary-color);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--border-radius-sm);
   cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-soft);
+}
+
+.qa-form button:hover:not(:disabled) {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
 }
 
 .qa-form button:disabled {
-  background: #ccc;
+  background: var(--text-light);
   cursor: not-allowed;
 }
 
 .qa-empty {
   text-align: center;
   padding: 3rem;
-  color: #666;
+  color: var(--text-secondary);
 }
 

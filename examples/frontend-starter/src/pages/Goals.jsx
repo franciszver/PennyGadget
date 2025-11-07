@@ -276,15 +276,15 @@ function Goals() {
                     className="goal-delete-btn"
                     onClick={(e) => handleDeleteGoal(goal, e)}
                     style={{
-                      background: '#dc3545',
+                      background: 'var(--accent-color)',
                       color: 'white',
                       border: 'none',
-                      borderRadius: '4px',
+                      borderRadius: 'var(--border-radius-sm)',
                       padding: '0.25rem 0.5rem',
                       cursor: 'pointer',
                       fontSize: '0.875rem',
                       fontWeight: 'bold',
-                      transition: 'background 0.2s',
+                      transition: 'all 0.2s',
                       lineHeight: '1',
                       minWidth: '24px',
                       height: '24px',
@@ -295,12 +295,12 @@ function Goals() {
                     }}
                     onMouseEnter={(e) => {
                       if (!deleteMutation.isPending) {
-                        e.currentTarget.style.background = '#c82333';
+                        e.currentTarget.style.background = 'var(--accent-hover)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (!deleteMutation.isPending) {
-                        e.currentTarget.style.background = '#dc3545';
+                        e.currentTarget.style.background = 'var(--accent-color)';
                       }
                     }}
                     title="Delete this goal"
@@ -327,8 +327,8 @@ function Goals() {
                     borderRadius: '4px',
                     fontSize: '0.875rem',
                     fontWeight: 'bold',
-                    color: goal.elo_rating >= 1500 ? '#28a745' : goal.elo_rating >= 1200 ? '#007bff' : goal.elo_rating >= 800 ? '#ffc107' : '#dc3545',
-                    backgroundColor: goal.elo_rating >= 1500 ? '#d4edda' : goal.elo_rating >= 1200 ? '#d1ecf1' : goal.elo_rating >= 800 ? '#fff3cd' : '#f8d7da'
+                    color: goal.elo_rating >= 1500 ? 'var(--secondary-color)' : goal.elo_rating >= 1200 ? 'var(--primary-color)' : goal.elo_rating >= 800 ? 'var(--warning-color)' : 'var(--accent-color)',
+                    backgroundColor: goal.elo_rating >= 1500 ? '#E8F5E9' : goal.elo_rating >= 1200 ? 'var(--primary-light)' : goal.elo_rating >= 800 ? 'var(--bg-accent)' : '#FFEBEE'
                   }}>
                     Elo: {goal.elo_rating} ({goal.elo_rating >= 1500 ? 'Advanced' : goal.elo_rating >= 1200 ? 'Intermediate' : goal.elo_rating >= 800 ? 'Beginner' : 'Novice'})
                   </span>
@@ -350,27 +350,27 @@ function Goals() {
                 <div style={{ 
                   marginTop: '0.75rem', 
                   padding: '0.75rem', 
-                  backgroundColor: '#fff3cd', 
-                  border: '1px solid #ffc107',
+                  backgroundColor: 'var(--bg-accent)', 
+                  border: '1px solid var(--primary-light)',
                   borderRadius: '4px',
                   fontSize: '0.875rem'
                 }}>
-                  <p style={{ margin: '0 0 0.5rem 0', color: '#856404', fontWeight: '500' }}>
-                    ⚠️ Your Elo rating is {goal.elo_rating < 800 ? 'Novice' : 'Beginner'} ({goal.elo_rating}). 
-                    Consider resetting this goal to practice more and improve your rating!
+                  <p style={{ margin: '0 0 0.5rem 0', color: 'var(--text-secondary)', fontWeight: '400' }}>
+                    💡 Your confidence score is {goal.elo_rating < 800 ? 'Novice' : 'Beginner'} ({goal.elo_rating}). 
+                    Want to lift it higher? Consider resetting this goal to practice more.
                   </p>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (window.confirm(`Reset "${goal.title}"? This will allow you to practice more and improve your Elo rating.`)) {
+                      if (window.confirm(`Reset "${goal.title}"? This will give you a fresh start to lift your confidence score.`)) {
                         resetGoalMutation.mutate(goal.id);
                       }
                     }}
                     disabled={resetGoalMutation.isPending}
                     style={{
                       padding: '0.5rem 1rem',
-                      backgroundColor: '#ffc107',
-                      color: '#856404',
+                      backgroundColor: 'var(--accent-color)',
+                      color: 'white',
                       border: 'none',
                       borderRadius: '4px',
                       cursor: resetGoalMutation.isPending ? 'not-allowed' : 'pointer',
@@ -379,7 +379,7 @@ function Goals() {
                       opacity: resetGoalMutation.isPending ? 0.6 : 1
                     }}
                   >
-                    {resetGoalMutation.isPending ? 'Resetting...' : 'Reset Goal & Improve Elo'}
+                    {resetGoalMutation.isPending ? 'Resetting...' : 'Reset Goal & Lift Confidence'}
                   </button>
                 </div>
               )}

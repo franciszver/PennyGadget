@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { api } from '../services/apiClient';
@@ -12,6 +12,7 @@ function Practice() {
   const { success, error: showError } = useToast();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const subjectFromUrl = searchParams.get('subject');
 
   // Fetch user's progress to get goals and suggestions
@@ -21,29 +22,16 @@ function Practice() {
     enabled: !!user?.id,
   });
 
-  // Build list of available subjects from goals and suggestions
+  // Build list of available subjects from goals only
   const availableSubjects = useMemo(() => {
     const subjectsSet = new Set();
     const progress = progressData?.data || {};
 
-    // Add subjects from goals
+    // Add subjects from goals only
     if (progress.goals) {
       progress.goals.forEach(goal => {
         if (goal.subject && goal.subject !== 'Unknown') {
           subjectsSet.add(goal.subject);
-        }
-      });
-    }
-
-    // Add subjects from suggestions
-    if (progress.suggestions) {
-      progress.suggestions.forEach(suggestion => {
-        if (suggestion.subjects && Array.isArray(suggestion.subjects)) {
-          suggestion.subjects.forEach(subject => {
-            if (subject) {
-              subjectsSet.add(subject);
-            }
-          });
         }
       });
     }
@@ -233,12 +221,55 @@ function Practice() {
     },
   });
 
+  // Mutation for creating a goal
+  const createGoalMutation = useMutation({
+    mutationFn: (data) => api.createGoal(data),
+    onSuccess: () => {
+      // Invalidate progress query to refresh available subjects
+      queryClient.invalidateQueries({ queryKey: ['progress', user?.id] });
+      success('Goal created! Starting practice...');
+    },
+    onError: (err) => {
+      console.error('[PRACTICE] Goal creation error:', err);
+      const errorMessage = err.response?.data?.detail || 'Failed to create goal. Please try again.';
+      showError(errorMessage);
+    },
+  });
+
   const handleStartPractice = () => {
-    assignMutation.mutate({
-      student_id: user.id,
-      subject: selectedSubject,
-      difficulty_level: 5,
-    });
+    // Check if user has no goals
+    const goals = progressData?.data?.goals || [];
+    const hasNoGoals = goals.length === 0;
+
+    if (hasNoGoals) {
+      // Create a goal first, then start practice
+      createGoalMutation.mutate(
+        {
+          student_id: user.id,
+          title: `Master ${selectedSubject}`,
+          description: `Practice and improve your skills in ${selectedSubject}`,
+          goal_type: 'Standard',
+          subject_name: selectedSubject,
+        },
+        {
+          onSuccess: () => {
+            // After goal is created, start practice
+            assignMutation.mutate({
+              student_id: user.id,
+              subject: selectedSubject,
+              difficulty_level: 5,
+            });
+          },
+        }
+      );
+    } else {
+      // User has goals, start practice directly
+      assignMutation.mutate({
+        student_id: user.id,
+        subject: selectedSubject,
+        difficulty_level: 5,
+      });
+    }
   };
 
   const handleSubmit = () => {
@@ -402,8 +433,8 @@ function Practice() {
               <div style={{
                 marginTop: '1.5rem',
                 padding: '1rem',
-                backgroundColor: '#fff3cd',
-                border: '1px solid #ffc107',
+                backgroundColor: 'var(--bg-accent)',
+                border: '1px solid var(--primary-light)',
                 borderRadius: '4px'
               }}>
                 <p style={{ margin: 0, fontWeight: '500', color: '#856404' }}>
@@ -425,7 +456,7 @@ function Practice() {
                 marginTop: '2rem',
                 padding: '0.75rem 2rem',
                 fontSize: '1rem',
-                backgroundColor: '#007bff',
+                backgroundColor: 'var(--primary-color)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
@@ -444,11 +475,15 @@ function Practice() {
 
   // Show practice setup
   if (allItems.length === 0) {
+    const isCreatingGoal = createGoalMutation.isPending;
+    const isStartingPractice = assignMutation.isPending;
+    const isLoading = isCreatingGoal || isStartingPractice;
+    
     return (
       <div className="practice">
         <h1>Practice Assignment</h1>
-        {assignMutation.isPending ? (
-          <LoadingSpinner message="Loading practice question..." />
+        {isLoading ? (
+          <LoadingSpinner message={isCreatingGoal ? "Creating goal..." : "Loading practice question..."} />
         ) : (
           <div className="practice-setup">
             <label>
@@ -457,6 +492,7 @@ function Practice() {
                 value={selectedSubject} 
                 onChange={(e) => setSelectedSubject(e.target.value)}
                 style={{ minWidth: '200px' }}
+                disabled={isLoading}
               >
                 {availableSubjects.map(subject => (
                   <option key={subject} value={subject}>
@@ -467,14 +503,14 @@ function Practice() {
             </label>
             {availableSubjects.length === 0 && (
               <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
-                No subjects available. Create a goal or check your progress for suggestions.
+                No goals yet. We'll create a goal for "{selectedSubject}" when you start practice.
               </p>
             )}
             <button 
               onClick={handleStartPractice} 
-              disabled={assignMutation.isPending || availableSubjects.length === 0}
+              disabled={isLoading || !selectedSubject}
             >
-              Start Practice
+              {isCreatingGoal ? 'Creating Goal...' : isStartingPractice ? 'Starting Practice...' : 'Start Practice'}
             </button>
           </div>
         )}
@@ -496,12 +532,12 @@ function Practice() {
           <div style={{
             marginTop: '1.5rem',
             padding: '1rem',
-            backgroundColor: '#d4edda',
-            border: '1px solid #c3e6cb',
-            borderRadius: '4px'
+            backgroundColor: '#E8F5E9',
+            border: '1px solid var(--secondary-color)',
+            borderRadius: 'var(--border-radius-sm)'
           }}>
-            <h3 style={{ marginTop: 0, color: '#155724' }}>Explanation:</h3>
-            <p style={{ margin: 0, color: '#155724' }}>{currentItem.explanation}</p>
+            <h3 style={{ marginTop: 0, color: 'var(--text-primary)' }}>Explanation:</h3>
+            <p style={{ margin: 0, color: 'var(--text-primary)' }}>{currentItem.explanation}</p>
           </div>
         )}
 
@@ -509,14 +545,14 @@ function Practice() {
           <div style={{
             marginTop: '1.5rem',
             padding: '1rem',
-            backgroundColor: '#f8d7da',
-            border: '1px solid #f5c6cb',
-            borderRadius: '4px',
-            color: '#721c24',
+            backgroundColor: '#FFEBEE',
+            border: '1px solid var(--accent-color)',
+            borderRadius: 'var(--border-radius-sm)',
+            color: 'var(--text-primary)',
             marginBottom: '1rem'
           }}>
             <p style={{ margin: 0, fontWeight: '500' }}>
-              Incorrect. Try again! (Attempt {currentAttempts})
+              Not quite right — let's try again! (Attempt {currentAttempts})
             </p>
           </div>
         )}
@@ -534,22 +570,22 @@ function Practice() {
                       display: 'flex',
                       alignItems: 'center',
                       padding: '0.75rem',
-                      border: `2px solid ${isSelected ? '#007bff' : '#ddd'}`,
-                      borderRadius: '8px',
+                      border: `2px solid ${isSelected ? 'var(--primary-color)' : 'var(--border-color)'}`,
+                      borderRadius: 'var(--border-radius-sm)',
                       cursor: 'pointer',
-                      backgroundColor: isSelected ? '#f0f8ff' : 'white',
+                      backgroundColor: isSelected ? 'var(--primary-light)' : 'var(--bg-primary)',
                       transition: 'all 0.2s'
                     }}
                     onMouseEnter={(e) => {
                       if (!isSelected) {
-                        e.currentTarget.style.borderColor = '#007bff';
-                        e.currentTarget.style.backgroundColor = '#f8f9fa';
+                        e.currentTarget.style.borderColor = 'var(--primary-color)';
+                        e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (!isSelected) {
-                        e.currentTarget.style.borderColor = '#ddd';
-                        e.currentTarget.style.backgroundColor = 'white';
+                        e.currentTarget.style.borderColor = 'var(--border-color)';
+                        e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
                       }
                     }}
                   >
@@ -588,7 +624,7 @@ function Practice() {
               style={{
                 padding: '0.75rem 2rem',
                 fontSize: '1rem',
-                backgroundColor: selectedChoice ? '#007bff' : '#ccc',
+                backgroundColor: selectedChoice ? 'var(--primary-color)' : 'var(--text-light)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
@@ -607,7 +643,7 @@ function Practice() {
                 style={{
                   padding: '0.75rem 2rem',
                   fontSize: '1rem',
-                  backgroundColor: '#17a2b8',
+                  backgroundColor: 'var(--primary-color)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
@@ -615,7 +651,7 @@ function Practice() {
                   fontWeight: '500'
                 }}
               >
-                Pause, Dive Deeper
+                Curious? Explore Deeper
               </button>
               {currentIndex < allItems.length - 1 ? (
                 <button
@@ -623,7 +659,7 @@ function Practice() {
                   style={{
                     padding: '0.75rem 2rem',
                     fontSize: '1rem',
-                    backgroundColor: '#28a745',
+                    backgroundColor: 'var(--secondary-color)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '4px',
@@ -639,7 +675,7 @@ function Practice() {
                 style={{
                   padding: '0.75rem 2rem',
                   fontSize: '1rem',
-                  backgroundColor: '#6c757d',
+                  backgroundColor: 'var(--text-secondary)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',

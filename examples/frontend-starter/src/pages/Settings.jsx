@@ -25,7 +25,10 @@ function Settings() {
 
   return (
     <div className="settings">
-      <h1>Settings</h1>
+      <h1>Your Preferences</h1>
+      <p className="inspirational" style={{ marginBottom: '2rem', color: 'var(--text-secondary)' }}>
+        Customize your learning experience
+      </p>
 
       <div className="settings-sections">
         <div className="settings-section">

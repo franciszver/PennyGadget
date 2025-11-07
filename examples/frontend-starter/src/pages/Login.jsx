@@ -73,7 +73,11 @@ function Login() {
   return (
     <div className="login">
       <div className="login-container">
-              <h1>AI Study Companion</h1>
+        <img src="/elevare-logo.svg" alt="ElevareAI" style={{ width: '80px', height: '80px', marginBottom: '1rem' }} />
+        <h1>ElevareAI</h1>
+        <p className="tagline" style={{ marginBottom: '2rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+          Lift your learning, gently.
+        </p>
               <form onSubmit={handleSubmit}>
                 <div className="form-group">
                   <input

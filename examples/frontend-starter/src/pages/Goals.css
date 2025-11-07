@@ -13,37 +13,43 @@
 
 .btn-primary {
   padding: 0.75rem 1.5rem;
-  background: #007bff;
+  background: var(--primary-color);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--border-radius-sm);
   cursor: pointer;
   font-weight: 500;
-  transition: background 0.2s;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-soft);
 }
 
 .btn-primary:hover {
-  background: #0056b3;
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
 }
 
 .btn-primary:disabled {
-  background: #ccc;
+  background: var(--text-light);
   cursor: not-allowed;
 }
 
 .btn-secondary {
   padding: 0.75rem 1.5rem;
-  background: #6c757d;
+  background: var(--text-secondary);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--border-radius-sm);
   cursor: pointer;
   font-weight: 500;
-  transition: background 0.2s;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-soft);
 }
 
 .btn-secondary:hover {
-  background: #5a6268;
+  background: var(--text-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
 }
 
 .goal-form-card {
@@ -84,12 +90,12 @@
 .form-group input.error,
 .form-group textarea.error,
 .form-group select.error {
-  border-color: #dc3545;
+  border-color: var(--accent-color);
 }
 
 .error-message {
   display: block;
-  color: #dc3545;
+  color: var(--accent-color);
   font-size: 0.875rem;
   margin-top: 0.25rem;
 }
@@ -191,13 +197,14 @@
 
 .progress-fill {
   height: 100%;
-  background: #007bff;
+  background: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 100%);
   transition: width 0.3s ease;
+  border-radius: var(--border-radius-sm);
 }
 
 .progress-text {
   font-size: 0.875rem;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .empty-state {

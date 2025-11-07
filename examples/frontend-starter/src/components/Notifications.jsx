@@ -149,7 +149,7 @@ function Notifications() {
                                 key={sIdx}
                                 style={{ 
                                   cursor: 'pointer', 
-                                  color: '#007bff',
+                                  color: 'var(--primary-color)',
                                   textDecoration: 'underline'
                                 }}
                                 onClick={(e) => {

@@ -223,7 +223,7 @@ Body: { "student_id": "...", "query": "What is photosynthesis?" }
 
 GET /api/v1/qa/conversation-history/{student_id}
 # Returns: Recent conversation history for context
-```
+```re
 
 ---
 

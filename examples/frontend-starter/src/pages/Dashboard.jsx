@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/apiClient';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import './Dashboard.css';
 
 function Dashboard() {
@@ -62,7 +63,9 @@ function Dashboard() {
 
   return (
     <div className="dashboard">
-      <h1>Welcome to AI Study Companion</h1>
+      <h1 className="dashboard-title">
+        Welcome back! <span className="inspirational">Let's lift your learning today.</span>
+      </h1>
       
       {progressError && (
         <div style={{ 
@@ -70,21 +73,23 @@ function Dashboard() {
           padding: '1rem', 
           marginBottom: '1rem', 
           borderRadius: '4px',
-          border: '1px solid #ffc107'
+          border: '1px solid var(--primary-light)'
         }}>
           <strong>Note:</strong> API calls are failing (expected in development with mock authentication). 
           The backend needs to be running and configured for API calls to work.
         </div>
       )}
 
-      {/* Inactivity Nudge - Prominent Display */}
+      {/* Inactivity Nudge - Gentle, Supportive Display */}
       {inactivityNudge && (
         <div className="nudge-card inactivity-nudge">
           <div className="nudge-header">
-            <span className="nudge-icon">🔔</span>
-            <h3>Important Notice</h3>
+            <span className="nudge-icon">💙</span>
+            <h3>A gentle reminder</h3>
           </div>
-          <p className="nudge-message">{inactivityNudge.message}</p>
+          <p className="nudge-message">
+            It's been a little while — want to lift your confidence today?
+          </p>
           {inactivityNudge.suggestions && inactivityNudge.suggestions.length > 0 && (
             <div className="nudge-suggestions">
               <strong>Suggested Actions:</strong>
@@ -119,8 +124,8 @@ function Dashboard() {
           {otherNudges.map((nudge, idx) => (
             <div key={idx} className="nudge-card">
               <div className="nudge-header">
-                <span className="nudge-icon">💡</span>
-                <h3>{nudge.type === 'goal_completion' ? 'Goal Completed!' : 'Suggestion'}</h3>
+                <span className="nudge-icon">✨</span>
+                <h3>{nudge.type === 'goal_completion' ? "You've reached your goal!" : 'A friendly suggestion'}</h3>
               </div>
               <p className="nudge-message">{nudge.message}</p>
               {nudge.suggestions && nudge.suggestions.length > 0 && (
@@ -139,29 +144,194 @@ function Dashboard() {
       
       <div className="dashboard-grid">
         <div className="card">
-          <h2>Progress Overview</h2>
-          {progress?.data ? (
+          <h2>Your Progress</h2>
+          {progress?.data ? (() => {
+            const goals = progress.data.goals || [];
+            
+            // Calculate color based on completion percentage
+            // Gradient from blue (0%) to green (100%) - matching Goals page progress bars
+            const getCompletionColor = (completion) => {
+              const percentage = Math.max(0, Math.min(100, completion || 0)) / 100;
+              
+              // Blue: #4A90E2 (primary-color)
+              // Green: #7ED321 (secondary-color)
+              const blue = { r: 74, g: 144, b: 226 };
+              const green = { r: 126, g: 211, b: 33 };
+              
+              // Interpolate between blue and green based on completion
+              const r = Math.round(blue.r + (green.r - blue.r) * percentage);
+              const g = Math.round(blue.g + (green.g - blue.g) * percentage);
+              const b = Math.round(blue.b + (green.b - blue.b) * percentage);
+              
+              return `rgb(${r}, ${g}, ${b})`;
+            };
+            
+            // Prepare data for pie chart - one segment per goal
+            const chartData = goals.map((goal, index) => {
+              const completion = goal.completion_percentage || 0;
+              return {
+                name: goal.title || `Goal ${index + 1}`,
+                value: completion,
+                color: getCompletionColor(completion),
+                status: goal.status || 'active',
+                completion: completion,
+                subject: goal.subject || 'Unknown Subject',
+                eloRating: goal.elo_rating
+              };
+            });
+            
+            // Calculate status counts for stats
+            const statusCounts = goals.reduce((acc, goal) => {
+              const status = goal.status || 'active';
+              acc[status] = (acc[status] || 0) + 1;
+              return acc;
+            }, {});
+            
+            const totalGoals = goals.length;
+            const activeGoals = statusCounts.active || 0;
+            const completedGoals = statusCounts.completed || 0;
+            
+            return (
+              <div className="progress-chart-container">
+                {totalGoals > 0 ? (
+                  <>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={chartData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, value }) => {
+                            // Show only completion percentage on chart to avoid cutoff
+                            // Full name will be shown in tooltip
+                            if (value > 0) {
+                              return `${value.toFixed(0)}%`;
+                            }
+                            return '';
+                          }}
+                          outerRadius={55}
+                          innerRadius={20}
+                          fill="#8884d8"
+                          dataKey="value"
+                          paddingAngle={3}
+                        >
+                          {chartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0];
+                              const goalName = data.name;
+                              const completion = data.payload.completion || 0;
+                              const status = data.payload.status || 'active';
+                              const subject = data.payload.subject || 'Unknown';
+                              const eloRating = data.payload.eloRating;
+                              
+                              return (
+                                <div style={{
+                                  backgroundColor: 'white',
+                                  padding: '0.75rem',
+                                  borderRadius: 'var(--border-radius-sm)',
+                                  boxShadow: 'var(--shadow)',
+                                  border: '1px solid var(--border-color)',
+                                  minWidth: '200px'
+                                }}>
+                                  <div style={{ 
+                                    fontWeight: '600', 
+                                    color: 'var(--text-primary)',
+                                    marginBottom: '0.5rem',
+                                    fontSize: '0.875rem'
+                                  }}>
+                                    {goalName}
+                                  </div>
+                                  <div style={{ 
+                                    fontSize: '0.75rem', 
+                                    color: 'var(--text-secondary)',
+                                    marginBottom: '0.25rem'
+                                  }}>
+                                    <strong>Status:</strong> {status.charAt(0).toUpperCase() + status.slice(1)}
+                                  </div>
+                                  <div style={{ 
+                                    fontSize: '0.75rem', 
+                                    color: 'var(--text-secondary)',
+                                    marginBottom: '0.25rem'
+                                  }}>
+                                    <strong>Completion:</strong> {completion.toFixed(0)}%
+                                  </div>
+                                  <div style={{ 
+                                    fontSize: '0.75rem', 
+                                    color: 'var(--text-secondary)',
+                                    marginBottom: '0.25rem'
+                                  }}>
+                                    <strong>Subject:</strong> {subject}
+                                  </div>
+                                  {eloRating !== undefined && eloRating !== null && (
+                                    <div style={{ 
+                                      fontSize: '0.75rem', 
+                                      color: 'var(--text-secondary)',
+                                      marginTop: '0.5rem',
+                                      paddingTop: '0.5rem',
+                                      borderTop: '1px solid var(--border-light)'
+                                    }}>
+                                      <strong>Elo Rating:</strong> {eloRating}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="progress-stats">
+                      <div className="stat-item">
+                        <span className="stat-label">Total Goals</span>
+                        <span className="stat-value">{totalGoals}</span>
+                      </div>
+                      <div className="stat-item">
+                        <span className="stat-label">Active</span>
+                        <span className="stat-value" style={{ color: 'var(--primary-color)' }}>{activeGoals}</span>
+                      </div>
+                      <div className="stat-item">
+                        <span className="stat-label">Completed</span>
+                        <span className="stat-value" style={{ color: 'var(--secondary-color)' }}>{completedGoals}</span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="no-goals-message">
+                    <p>No goals yet</p>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+                      Create your first goal to start tracking progress!
+                    </p>
+                    <Link to="/goals" className="action-link" style={{ marginTop: '1rem', display: 'inline-block' }}>
+                      Create Goal
+                    </Link>
+                  </div>
+                )}
+              </div>
+            );
+          })() : (
             <div>
-              <p>Goals: {progress.data.goals?.length || 0}</p>
-              <p>Sessions: {progress.data.recent_sessions?.length || 0}</p>
-            </div>
-          ) : (
-            <div>
-              <p>No data available</p>
-              <p style={{ fontSize: '0.875rem', color: '#666' }}>
-                {progressError ? 'API error (backend may not be running)' : 'Loading...'}
+              <p>Getting your progress ready...</p>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                {progressError ? 'Connecting to your data...' : 'Loading...'}
               </p>
             </div>
           )}
         </div>
 
         <div className="card">
-          <h2>Quick Actions</h2>
+          <h2>What would you like to explore?</h2>
           <div className="actions">
-            <Link to="/practice">Start Practice</Link>
-            <Link to="/qa">Ask a Question</Link>
-            <Link to="/progress">View Progress</Link>
-            <Link to="/goals">Manage Goals</Link>
+            <Link to="/practice" className="action-link">Start Practice</Link>
+            <Link to="/qa" className="action-link">Ask a Question</Link>
+            <Link to="/progress" className="action-link">View Progress</Link>
+            <Link to="/goals" className="action-link">Manage Goals</Link>
           </div>
         </div>
       </div>

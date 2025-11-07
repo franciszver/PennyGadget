@@ -63,6 +63,9 @@ function Messaging() {
   return (
     <div className="messaging">
       <h1>Messages</h1>
+      <p className="inspirational" style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>
+        Connect with your tutors
+      </p>
       
       {/* Integration Notice */}
       <div className="integration-notice">
