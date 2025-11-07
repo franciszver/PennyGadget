@@ -1,0 +1,26 @@
+"""
+Q&A API Schemas
+"""
+
+from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any
+
+
+class QueryRequest(BaseModel):
+    """Request schema for Q&A query"""
+    student_id: str = Field(..., description="Student UUID")
+    query: str = Field(..., min_length=1, max_length=2000, description="Student query")
+    context: Optional[Dict[str, Any]] = Field(None, description="Additional context")
+
+
+class QAResponse(BaseModel):
+    """Response schema for Q&A"""
+    interaction_id: str
+    query: str
+    answer: str
+    confidence: str
+    confidence_score: float
+    disclaimer_shown: bool
+    escalation: Optional[Dict[str, Any]] = None
+    metadata: Dict[str, Any]
+

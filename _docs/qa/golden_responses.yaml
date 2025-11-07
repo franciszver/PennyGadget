@@ -1,0 +1,753 @@
+# Golden Response Test Cases
+# These are the expected outputs for edge case scenarios
+# Use these to validate AI behavior and ensure regression safety
+
+test_suite:
+  name: "AI Study Companion MVP - Golden Responses"
+  version: "1.0.0"
+  description: "Expected outputs for all edge cases and core features"
+
+# ============================================================================
+# STEP 1: Session Completion → Summaries
+# ============================================================================
+
+session_summaries:
+  - test_id: "SS-001"
+    name: "missing_transcript"
+    description: "Session completed but transcript is missing or corrupted"
+    input:
+      event: "session_completion"
+      user_id: "student-001"
+      session_id: "session-abc123"
+      transcript: null
+      session_duration_minutes: 30
+      tutor_id: "tutor-001"
+    expected_output:
+      summary:
+        narrative: "Transcript unavailable. Limited recap generated based on session metadata."
+        next_steps:
+          - "Review previous session notes and practice materials"
+          - "Prepare specific questions for your next tutoring session"
+          - "Continue working on assigned practice problems"
+        metadata:
+          session_duration: "30 minutes"
+          tutor: "Available in tutor view"
+      stored_in: "summaries[]"
+      tutor_view: "read-only summary with note: 'Transcript unavailable'"
+    validation_rules:
+      - "Must not claim to have transcript content"
+      - "Must provide actionable next steps"
+      - "Must be permanently stored"
+
+  - test_id: "SS-002"
+    name: "mixed_subjects"
+    description: "Session covered multiple subjects (e.g., Math then Chemistry)"
+    input:
+      event: "session_completion"
+      user_id: "student-001"
+      session_id: "session-xyz789"
+      transcript: |
+        Tutor: "Let's start with factoring polynomials. Can you factor x² + 5x + 6?"
+        Student: "That would be (x + 2)(x + 3)."
+        Tutor: "Great! Now let's switch to chemistry. How do you balance H₂ + O₂ → H₂O?"
+        Student: "2H₂ + O₂ → 2H₂O"
+        Tutor: "Perfect! We'll continue with both topics next time."
+      session_duration_minutes: 45
+      tutor_id: "tutor-001"
+    expected_output:
+      summary:
+        narrative: "We reviewed factoring polynomials, then pivoted to balancing chemical equations. You demonstrated strong understanding of both polynomial factoring and basic chemical equation balancing."
+        next_steps:
+          - "Practice factoring polynomials: x² - 9, x² + 7x + 12"
+          - "Review balancing equations: CH₄ + O₂ → CO₂ + H₂O"
+          - "Prepare questions on either topic for next session"
+        subjects_covered: ["Algebra", "Chemistry"]
+      stored_in: "summaries[]"
+      tutor_view: "Full summary with transcript excerpts for both subjects"
+    validation_rules:
+      - "Must acknowledge both subjects clearly"
+      - "Next steps should cover all subjects"
+      - "Narrative should flow naturally between topics"
+
+  - test_id: "SS-003"
+    name: "extremely_short_session"
+    description: "Session was very brief (e.g., 5 minutes)"
+    input:
+      event: "session_completion"
+      user_id: "student-001"
+      session_id: "session-short001"
+      transcript: |
+        Tutor: "We only have 5 minutes today. Let's quickly review your homework."
+        Student: "I finished problems 1-5, but I'm stuck on problem 6."
+        Tutor: "Let's tackle that next time. Great work today!"
+      session_duration_minutes: 5
+      tutor_id: "tutor-001"
+    expected_output:
+      summary:
+        narrative: "Session was brief. We only had 5 minutes today. You completed problems 1-5 and identified problem 6 as needing attention."
+        next_steps:
+          - "Review last practice before next session"
+          - "Attempt problem 6 and note specific questions"
+          - "Prepare for a longer session next time"
+        metadata:
+          session_type: "brief_checkin"
+      stored_in: "summaries[]"
+    validation_rules:
+      - "Must acknowledge brevity without being negative"
+      - "Should still provide value with next steps"
+      - "Should encourage preparation for next session"
+
+# ============================================================================
+# STEP 2: Practice Assignment → Adaptive Practice
+# ============================================================================
+
+practice_assignment:
+  - test_id: "PA-001"
+    name: "bank_item_unavailable"
+    description: "Student requests practice on topic with no bank items"
+    input:
+      event: "practice_request"
+      user_id: "student-001"
+      subject: "Chemistry"
+      topic: "orbital hybridization"
+      available_bank_items: []
+      student_rating: 1200  # Intermediate level
+    expected_output:
+      practice_items:
+        - type: "ai_generated"
+          flagged: true
+          question: "Explain the concept of orbital hybridization and provide an example with sp³ hybridization."
+          answer: "[AI-generated answer with orbital diagrams]"
+          difficulty: 6
+          subject: "Chemistry"
+          topic: "orbital hybridization"
+          metadata:
+            source: "ai_generated"
+            requires_tutor_review: true
+            generated_at: "[timestamp]"
+      analytics:
+        source_logged: "ai_generated"
+        flagged_for_review: true
+    validation_rules:
+      - "Must generate practice item when bank is empty"
+      - "Must flag AI-generated items (flagged: true)"
+      - "Must log source for analytics"
+      - "Difficulty should match student rating"
+
+  - test_id: "PA-002"
+    name: "conflicting_difficulty"
+    description: "Student has high mastery in one subject area but low in another"
+    input:
+      event: "practice_request"
+      user_id: "student-001"
+      subject: "Math"
+      topic: "general"
+      student_ratings:
+        algebra: 1800  # Advanced
+        geometry: 600  # Beginner
+      available_bank_items:
+        - { subject: "Algebra", difficulty: 8, topic: "quadratic equations" }
+        - { subject: "Geometry", difficulty: 2, topic: "basic shapes" }
+    expected_output:
+      practice_items:
+        - type: "bank_item"
+          subject: "Algebra"
+          difficulty: 8
+          topic: "quadratic equations"
+          question: "[Advanced algebra question]"
+        - type: "bank_item"
+          subject: "Geometry"
+          difficulty: 2
+          topic: "basic shapes"
+          question: "[Beginner geometry question]"
+      metadata:
+        adaptive_selection: true
+        difficulty_by_subject:
+          algebra: "advanced"
+          geometry: "beginner"
+    validation_rules:
+      - "Must assign different difficulty levels per subject"
+      - "Must not average ratings across subjects"
+      - "Should provide practice in both areas if requested"
+
+  - test_id: "PA-003"
+    name: "overlapping_goals"
+    description: "Student has multiple goals that overlap (e.g., SAT Math and AP Calculus)"
+    input:
+      event: "practice_request"
+      user_id: "student-001"
+      request: "I want SAT math practice"
+      active_goals:
+        - { type: "SAT", subject: "Math", completion: 70 }
+        - { type: "AP", subject: "Calculus", completion: 40 }
+      student_rating: 1400
+    expected_output:
+      practice_items:
+        - type: "bank_item"
+          question: "[SAT-style math question]"
+          tags: ["SAT", "AP_Calculus"]
+          difficulty: 7
+          metadata:
+            serves_multiple_goals: true
+            goal_tags: ["SAT", "AP_Calculus"]
+      analytics:
+        goal_overlap_detected: true
+        items_tagged_with: ["SAT", "AP_Calculus"]
+    validation_rules:
+      - "Must tag items with all relevant goals"
+      - "Should acknowledge overlap in metadata"
+      - "Single item can serve multiple goals"
+
+# ============================================================================
+# STEP 3: Query → Conversational Q&A
+# ============================================================================
+
+conversational_qa:
+  - test_id: "QA-001"
+    name: "ambiguous_query"
+    description: "Student query lacks context ('I don't get this')"
+    input:
+      event: "query_submission"
+      user_id: "student-001"
+      query: "I don't get this"
+      context:
+        recent_sessions: ["Algebra", "Chemistry"]
+        current_practice: "quadratic equations"
+        last_summary: "We worked on factoring polynomials"
+    expected_output:
+      answer: |
+        I'd be happy to help! Could you provide a bit more context? For example:
+        - Are you asking about something from your recent tutoring session?
+        - Is this related to your current practice problems?
+        - Which subject or topic are you working on?
+        
+        Based on your recent activity, you've been working on:
+        - Algebra (factoring polynomials, quadratic equations)
+        - Chemistry
+        
+        Would you like help with any of these topics?
+      confidence: "Low"
+      disclaimer_shown: true
+      escalation: null
+      metadata:
+        clarification_requested: true
+        suggested_topics: ["Algebra", "Chemistry"]
+    validation_rules:
+      - "Must ask for clarification"
+      - "Should suggest likely topics based on context"
+      - "Confidence should be Low for ambiguous queries"
+      - "No tutor escalation needed (just clarification)"
+
+  - test_id: "QA-002"
+    name: "multi_part_query"
+    description: "Student asks about multiple topics in one query"
+    input:
+      event: "query_submission"
+      user_id: "student-001"
+      query: "Explain photosynthesis and also help me with factoring quadratics."
+      context:
+        subjects: ["Biology", "Algebra"]
+    expected_output:
+      answer: |
+        I'll help you with both topics! Let me break this into two sections:
+        
+        **1. Photosynthesis**
+        Photosynthesis is the process by which plants convert light energy into chemical energy...
+        [Detailed explanation with formula: 6CO₂ + 6H₂O → C₆H₁₂O₆ + 6O₂]
+        
+        **2. Factoring Quadratics**
+        To factor a quadratic expression like x² + bx + c, you need to find two numbers that...
+        [Step-by-step explanation with examples]
+        
+        Would you like me to go deeper into either topic, or do you have specific questions?
+      confidence: "High"
+      disclaimer_shown: true
+      sections: 2
+      metadata:
+        multi_topic: true
+        topics_covered: ["Biology", "Algebra"]
+    validation_rules:
+      - "Must split answer into clear sections"
+      - "Should address both parts completely"
+      - "Confidence can be High if both topics are well-understood"
+      - "Should offer to dive deeper"
+
+  - test_id: "QA-003"
+    name: "out_of_scope_query"
+    description: "Student asks something unrelated to academics"
+    input:
+      event: "query_submission"
+      user_id: "student-001"
+      query: "What's the weather tomorrow?"
+      context: {}
+    expected_output:
+      answer: |
+        I'm designed to help with your academic studies and tutoring-related questions. I can't provide weather information.
+        
+        I can help you with:
+        - Questions about your tutoring sessions
+        - Practice problems and homework
+        - Study strategies and learning tips
+        - Understanding concepts from your subjects
+        
+        Is there something academic I can help you with instead?
+      confidence: "N/A"
+      disclaimer_shown: true
+      escalation: null
+      metadata:
+        out_of_scope: true
+        redirect_attempted: true
+    validation_rules:
+      - "Must politely redirect"
+      - "Should explain scope limitations"
+      - "Should offer relevant alternatives"
+      - "No confidence score for out-of-scope"
+
+  - test_id: "QA-004"
+    name: "low_confidence_domain"
+    description: "Query requires advanced expertise (e.g., quantum mechanics)"
+    input:
+      event: "query_submission"
+      user_id: "student-001"
+      query: "Can you explain the Schrödinger equation in detail?"
+      context:
+        subjects: ["Physics"]
+        student_level: "high_school"
+    expected_output:
+      answer: |
+        The Schrödinger equation is a fundamental equation in quantum mechanics that describes how quantum systems evolve over time. Here's a high-level overview:
+        
+        **Basic Form:** iℏ(∂ψ/∂t) = Ĥψ
+        
+        Where:
+        - ψ (psi) is the wave function
+        - Ĥ is the Hamiltonian operator
+        - ℏ is the reduced Planck constant
+        
+        This is an advanced topic typically covered in college-level physics. For a detailed explanation with derivations and applications, I'd recommend:
+        
+        1. **Escalate to your tutor** - They can provide personalized guidance at the right level
+        2. **Review foundational concepts** - Make sure you're comfortable with wave functions and operators first
+        
+        Would you like me to help you prepare specific questions for your tutor about this topic?
+      confidence: "Low"
+      disclaimer_shown: true
+      escalation:
+        suggested: true
+        reason: "Advanced topic requiring expert guidance"
+        message: "I recommend discussing this with your tutor for a more detailed explanation."
+      metadata:
+        complexity_level: "advanced"
+        escalation_recommended: true
+    validation_rules:
+      - "Must provide high-level overview"
+      - "Must acknowledge complexity"
+      - "Must suggest tutor escalation"
+      - "Confidence must be Low"
+      - "Should help student prepare for tutor discussion"
+
+# ============================================================================
+# STEP 4: Inactivity → Nudges
+# ============================================================================
+
+inactivity_nudges:
+  - test_id: "NU-001"
+    name: "low_session_count"
+    description: "Student has < 3 sessions by Day 7 after signup"
+    input:
+      event: "inactivity_check"
+      user_id: "student-001"
+      days_since_signup: 7
+      sessions_completed: 2
+      threshold: 3
+      last_activity: "2024-01-01"
+      preferences:
+        nudge_frequency_cap: 1  # per day
+        nudge_count_today: 0
+    expected_output:
+      nudge:
+        type: "inactivity"
+        channel: "in_app"
+        message: |
+          Hi! We noticed you've only completed 2 sessions so far. Regular practice is key to success!
+          
+          Would you like to:
+          - Schedule your next tutoring session?
+          - Try some practice problems?
+          - Set up study goals?
+        personalized: true
+        sent_at: "[timestamp]"
+        metadata:
+          trigger: "low_session_count"
+          days_since_signup: 7
+          sessions_completed: 2
+      email_nudge:
+        channel: "email"
+        subject: "Let's get you back on track!"
+        sent_at: "[timestamp]"
+      analytics:
+        nudge_type: "inactivity"
+        engagement_tracked: true
+    validation_rules:
+      - "Must send both in-app and email"
+      - "Must respect frequency cap (1 per day)"
+      - "Must be personalized"
+      - "Must log for analytics"
+
+  - test_id: "NU-002"
+    name: "frequency_cap_enforcement"
+    description: "Student has already received a nudge today"
+    input:
+      event: "inactivity_check"
+      user_id: "student-001"
+      days_since_signup: 7
+      sessions_completed: 2
+      preferences:
+        nudge_frequency_cap: 1
+        nudge_count_today: 1
+        last_nudge_at: "[today's date]"
+    expected_output:
+      nudge: null
+      reason: "Frequency cap reached (1 nudge per day)"
+      next_available: "[tomorrow's date]"
+      analytics:
+        nudge_suppressed: true
+        reason: "frequency_cap"
+    validation_rules:
+      - "Must not send nudge if cap reached"
+      - "Must log suppression reason"
+      - "Should track when next nudge can be sent"
+
+  - test_id: "NU-003"
+    name: "cross_subject_suggestion"
+    description: "Student completes a goal, suggest related subjects"
+    input:
+      event: "goal_completion"
+      user_id: "student-001"
+      completed_goal:
+        subject: "Chemistry"
+        type: "AP"
+        completion_date: "[today]"
+      active_goals: []
+      subject_relationships:
+        Chemistry: ["Physics", "Biology"]
+    expected_output:
+      nudge:
+        type: "cross_subject"
+        channel: "in_app"
+        message: |
+          Congratulations on completing your Chemistry goal! 🎉
+          
+          Based on your success, you might also enjoy:
+          - **Physics** - Builds on chemistry concepts like atomic structure
+          - **Biology** - Connects to chemical processes in living systems
+          
+          Would you like to set a new goal in one of these subjects?
+        personalized: true
+        suggestions: ["Physics", "Biology"]
+        sent_at: "[timestamp]"
+      analytics:
+        nudge_type: "cross_subject"
+        trigger: "goal_completion"
+        suggestions_made: ["Physics", "Biology"]
+    validation_rules:
+      - "Must celebrate completion"
+      - "Must suggest related subjects"
+      - "Should explain why subjects are related"
+      - "Should prompt goal creation"
+
+# ============================================================================
+# STEP 5: Tutor Override → Immediate Update
+# ============================================================================
+
+tutor_overrides:
+  - test_id: "TO-001"
+    name: "override_summary"
+    description: "Tutor disagrees with AI-generated summary and overrides it"
+    input:
+      event: "tutor_override"
+      tutor_id: "tutor-001"
+      student_id: "student-001"
+      override_type: "summary"
+      original_summary_id: "summary-abc123"
+      override_action: "Replace next steps"
+      new_next_steps:
+        - "Focus on chapter 5 exercises only"
+        - "Skip practice problems, review theory instead"
+    expected_output:
+      override:
+        tutor_id: "tutor-001"
+        student_id: "student-001"
+        action: "summary_override"
+        original_content: "[reference to original summary]"
+        new_content:
+          next_steps:
+            - "Focus on chapter 5 exercises only"
+            - "Skip practice problems, review theory instead"
+        timestamp: "[timestamp]"
+      dashboard_update:
+        immediate: true
+        student_view: "Updated next steps visible immediately"
+        summary_updated: true
+      analytics:
+        override_logged: true
+        override_type: "summary"
+        subject: "[from original summary]"
+    validation_rules:
+      - "Must log override with timestamp"
+      - "Dashboard must update immediately"
+      - "Student must see updated content"
+      - "Must track in analytics"
+
+  - test_id: "TO-002"
+    name: "replace_ai_practice"
+    description: "Tutor replaces AI-generated practice item with bank item"
+    input:
+      event: "tutor_override"
+      tutor_id: "tutor-001"
+      student_id: "student-001"
+      override_type: "practice"
+      ai_item_id: "practice-ai-xyz"
+      replacement_item_id: "practice-bank-123"
+      reason: "AI item too advanced for student level"
+    expected_output:
+      override:
+        tutor_id: "tutor-001"
+        student_id: "student-001"
+        action: "practice_replacement"
+        original_item:
+          id: "practice-ai-xyz"
+          flagged: true
+          source: "ai_generated"
+        replacement_item:
+          id: "practice-bank-123"
+          source: "bank"
+        timestamp: "[timestamp]"
+        reason: "AI item too advanced for student level"
+      dashboard_update:
+        immediate: true
+        practice_item_replaced: true
+      analytics:
+        override_logged: true
+        override_type: "practice"
+        ai_item_flagged: true
+        replacement_source: "bank"
+    validation_rules:
+      - "Must swap items immediately"
+      - "Must log original and replacement"
+      - "Must track reason for override"
+      - "Should inform student of change"
+
+  - test_id: "TO-003"
+    name: "multiple_overrides"
+    description: "Tutor makes multiple overrides in short time period"
+    input:
+      event: "tutor_override"
+      tutor_id: "tutor-001"
+      student_id: "student-001"
+      overrides:
+        - { type: "summary", timestamp: "2024-01-01T10:00:00Z" }
+        - { type: "practice", timestamp: "2024-01-01T10:05:00Z" }
+        - { type: "practice", timestamp: "2024-01-01T10:10:00Z" }
+    expected_output:
+      overrides:
+        - override_id: "override-001"
+          tutor_id: "tutor-001"
+          student_id: "student-001"
+          action: "summary_override"
+          timestamp: "2024-01-01T10:00:00Z"
+        - override_id: "override-002"
+          tutor_id: "tutor-001"
+          student_id: "student-001"
+          action: "practice_replacement"
+          timestamp: "2024-01-01T10:05:00Z"
+        - override_id: "override-003"
+          tutor_id: "tutor-001"
+          student_id: "student-001"
+          action: "practice_replacement"
+          timestamp: "2024-01-01T10:10:00Z"
+      dashboard_updates:
+        all_immediate: true
+        update_count: 3
+      analytics:
+        override_frequency: "high"
+        overrides_in_period: 3
+        period_minutes: 10
+    validation_rules:
+      - "All overrides must be logged separately"
+      - "Each must have unique timestamp"
+      - "Dashboard must reflect all changes"
+      - "Should track override frequency patterns"
+
+# ============================================================================
+# STEP 6: Login → Progress Dashboard
+# ============================================================================
+
+progress_dashboard:
+  - test_id: "PD-001"
+    name: "multiple_goals"
+    description: "Student has multiple active goals with different completion levels"
+    input:
+      event: "login"
+      user_id: "student-001"
+      goals:
+        - { subject: "SAT Math", completion: 70, type: "SAT" }
+        - { subject: "Chemistry", completion: 40, type: "AP" }
+        - { subject: "English", completion: 85, type: "SAT" }
+    expected_output:
+      dashboard:
+        progress_summary: |
+          **Your Progress Overview:**
+          
+          📊 SAT Math: 70% complete
+          📊 Chemistry: 40% complete
+          📊 English: 85% complete
+        visual_charts:
+          - type: "progress_bar"
+            data: [
+              { subject: "SAT Math", percentage: 70 },
+              { subject: "Chemistry", percentage: 40 },
+              { subject: "English", percentage: 85 }
+            ]
+        textual_insights:
+          - "You're making great progress in English!"
+          - "Chemistry could use more attention - consider scheduling extra practice"
+          - "SAT Math is on track"
+        disclaimer_shown: false  # Already shown on first login
+      metadata:
+        goals_count: 3
+        average_completion: 65
+    validation_rules:
+      - "Must show all goals with percentages"
+      - "Must provide visual representation"
+      - "Must include textual insights"
+      - "Should highlight strengths and areas for improvement"
+
+  - test_id: "PD-002"
+    name: "no_goals"
+    description: "Student logs in but has no active goals set"
+    input:
+      event: "login"
+      user_id: "student-001"
+      goals: []
+      is_first_login: false
+    expected_output:
+      dashboard:
+        progress_summary: "No active goals set."
+        call_to_action:
+          message: "Set up your first goal to start tracking your progress!"
+          button_text: "Create Goal"
+          link: "/goals/new"
+        visual_charts: null
+        textual_insights:
+          - "Goals help you stay focused and track your improvement"
+          - "You can create goals for any subject or test prep"
+      metadata:
+        goals_count: 0
+        prompt_shown: true
+    validation_rules:
+      - "Must clearly indicate no goals"
+      - "Must prompt to create goals"
+      - "Should explain why goals are helpful"
+      - "Should provide easy path to create goals"
+
+  - test_id: "PD-003"
+    name: "completed_goal_suggestion"
+    description: "Student has completed a goal, suggest related subjects"
+    input:
+      event: "login"
+      user_id: "student-001"
+      goals:
+        - { subject: "SAT", completion: 100, type: "SAT", status: "completed" }
+        - { subject: "Chemistry", completion: 60, type: "AP", status: "active" }
+      completed_goals: ["SAT"]
+    expected_output:
+      dashboard:
+        progress_summary: |
+          **Your Progress Overview:**
+          
+          ✅ SAT: Complete! 🎉
+          📊 Chemistry: 60% complete
+        celebration:
+          message: "Congratulations on completing your SAT goal!"
+        suggestions:
+          type: "related_subjects"
+          subjects: ["AP English", "AP Math", "Essay Writing"]
+          message: "Based on your SAT success, you might enjoy:"
+        visual_charts:
+          - type: "progress_bar"
+            data: [
+              { subject: "SAT", percentage: 100, status: "completed" },
+              { subject: "Chemistry", percentage: 60 }
+            ]
+      metadata:
+        completed_goals: 1
+        suggestions_triggered: true
+    validation_rules:
+      - "Must celebrate completion"
+      - "Must suggest related subjects"
+      - "Should explain connection to completed goal"
+      - "Should make it easy to create new goals"
+
+  - test_id: "PD-004"
+    name: "first_login_disclaimer"
+    description: "First-time login must show universal disclaimer"
+    input:
+      event: "login"
+      user_id: "student-001"
+      is_first_login: true
+      disclaimer_shown: false
+    expected_output:
+      dashboard:
+        disclaimer:
+          shown: true
+          message: |
+            **Important Notice:**
+            
+            This AI Study Companion is designed to support your learning between tutoring sessions. 
+            While I can help with practice problems, explanations, and study guidance, I'm not a 
+            replacement for your tutor. For complex topics or when you see a "Low Confidence" 
+            label, please consult with your tutor.
+            
+            Your tutor can override any AI suggestions, and their guidance takes priority.
+          acknowledged_required: true
+          button_text: "I Understand"
+      metadata:
+        disclaimer_shown: true
+        disclaimer_acknowledged: false  # Until user clicks
+    validation_rules:
+      - "Must show disclaimer on first login only"
+      - "Must require acknowledgment"
+      - "Must explain AI limitations"
+      - "Must emphasize tutor priority"
+
+# ============================================================================
+# Validation Instructions
+# ============================================================================
+
+validation:
+  how_to_use: |
+    1. Run each test case against the corresponding MVP endpoint
+    2. Compare actual output to expected_output
+    3. Check all validation_rules are met
+    4. Log any discrepancies
+    5. Update golden responses if behavior intentionally changes
+  
+  regression_testing: |
+    - Run all test cases after each major code change
+    - Ensure no previously passing tests fail
+    - Document any intentional behavior changes
+  
+  confidence_validation: |
+    For Q&A tests, validate confidence scores match expected:
+    - High: ≥75% confidence score
+    - Medium: 50-74% confidence score  
+    - Low: <50% confidence score
+  
+  analytics_validation: |
+    Ensure all analytics events are logged:
+    - Override frequency
+    - Confidence distribution
+    - Nudge engagement (opened/clicked)
+    - Source tracking (bank vs AI)
+

@@ -1,0 +1,112 @@
+### Demo API Examples
+### Use with REST Client extension in VS Code or similar tools
+
+@baseUrl = http://localhost:8000
+@studentId = 00000000-0000-0000-0000-000000000001
+@tutorId = 00000000-0000-0000-0000-000000000002
+@sessionId = 00000000-0000-0000-0000-000000000003
+
+### 1. Health Check
+GET {{baseUrl}}/health
+
+### 2. Session Summary - Missing Transcript (Edge Case)
+POST {{baseUrl}}/api/v1/summaries
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "student_id": "{{studentId}}",
+  "tutor_id": "{{tutorId}}",
+  "transcript": null,
+  "session_duration_minutes": 30,
+  "subject": "Algebra",
+  "topics_covered": []
+}
+
+### 3. Session Summary - Mixed Subjects (Edge Case)
+POST {{baseUrl}}/api/v1/summaries
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "student_id": "{{studentId}}",
+  "tutor_id": "{{tutorId}}",
+  "transcript": "Tutor: Let's start with factoring polynomials. Can you factor x² + 5x + 6? Student: That would be (x + 2)(x + 3). Tutor: Great! Now let's switch to chemistry. How do you balance H₂ + O₂ → H₂O? Student: 2H₂ + O₂ → 2H₂O",
+  "session_duration_minutes": 45,
+  "subject": "Math",
+  "topics_covered": ["factoring", "chemical_equations"]
+}
+
+### 4. Practice Assignment - Bank Items Unavailable (Edge Case)
+POST {{baseUrl}}/api/v1/practice/assign
+Content-Type: application/json
+
+{
+  "student_id": "{{studentId}}",
+  "subject": "Advanced Quantum Physics",
+  "num_items": 5
+}
+
+### 5. Q&A - Ambiguous Query (Edge Case) ⭐ SHOWSTOPPER
+POST {{baseUrl}}/api/v1/qa/query
+Content-Type: application/json
+
+{
+  "student_id": "{{studentId}}",
+  "query": "I don't get this",
+  "context": {
+    "recent_sessions": ["Algebra", "Chemistry"],
+    "current_practice": "quadratic equations"
+  }
+}
+
+### 6. Q&A - Multi-Part Query (Edge Case)
+POST {{baseUrl}}/api/v1/qa/query
+Content-Type: application/json
+
+{
+  "student_id": "{{studentId}}",
+  "query": "Explain photosynthesis and also help me with factoring quadratics.",
+  "context": {
+    "subjects": ["Biology", "Algebra"]
+  }
+}
+
+### 7. Q&A - Out-of-Scope Query (Edge Case)
+POST {{baseUrl}}/api/v1/qa/query
+Content-Type: application/json
+
+{
+  "student_id": "{{studentId}}",
+  "query": "What's the weather tomorrow?",
+  "context": {}
+}
+
+### 8. Q&A - Clear Query (Happy Path)
+POST {{baseUrl}}/api/v1/qa/query
+Content-Type: application/json
+
+{
+  "student_id": "{{studentId}}",
+  "query": "What is photosynthesis?",
+  "context": {
+    "subjects": ["Biology"]
+  }
+}
+
+### 9. Progress Dashboard - No Goals (Edge Case)
+GET {{baseUrl}}/api/v1/progress/{{studentId}}
+
+### 10. Progress Dashboard - Multiple Goals (Happy Path)
+GET {{baseUrl}}/api/v1/progress/{{studentId}}
+
+### 11. Practice Assignment - Normal Flow
+POST {{baseUrl}}/api/v1/practice/assign
+Content-Type: application/json
+
+{
+  "student_id": "{{studentId}}",
+  "subject": "Algebra",
+  "num_items": 5
+}
+

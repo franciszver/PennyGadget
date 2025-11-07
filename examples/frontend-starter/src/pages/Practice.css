@@ -1,0 +1,76 @@
+.practice {
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.practice-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.practice-setup label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.practice-setup select {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.practice-setup button {
+  padding: 0.75rem;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.practice-setup button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.practice-question {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.practice-question h2 {
+  margin-bottom: 1.5rem;
+}
+
+.practice-question textarea {
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-family: inherit;
+}
+
+.practice-question button {
+  padding: 0.75rem 1.5rem;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.practice-question button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+

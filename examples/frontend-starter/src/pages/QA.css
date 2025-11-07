@@ -1,0 +1,91 @@
+.qa {
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 4rem);
+}
+
+.qa-conversation {
+  flex: 1;
+  overflow-y: auto;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.qa-message {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.qa-message.user {
+  background: #e3f2fd;
+  margin-left: 2rem;
+}
+
+.qa-message.assistant {
+  background: #f5f5f5;
+  margin-right: 2rem;
+}
+
+.qa-content {
+  margin-bottom: 0.5rem;
+}
+
+.qa-confidence {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.confidence-high {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.confidence-medium {
+  color: #ffc107;
+  font-weight: bold;
+}
+
+.confidence-low {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+.qa-form {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.qa-form input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.qa-form button {
+  padding: 0.75rem 1.5rem;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.qa-form button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.qa-empty {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+}
+

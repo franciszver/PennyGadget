@@ -1,0 +1,196 @@
+/**
+ * Form Validation Utilities
+ * Reusable validation functions for forms
+ */
+
+export const validators = {
+  required: (value) => {
+    if (!value || (typeof value === 'string' && !value.trim())) {
+      return 'This field is required';
+    }
+    return null;
+  },
+
+  email: (value) => {
+    if (!value) return null; // Use with required if needed
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(value)) {
+      return 'Please enter a valid email address';
+    }
+    return null;
+  },
+
+  minLength: (min) => (value) => {
+    if (!value) return null;
+    if (value.length < min) {
+      return `Must be at least ${min} characters`;
+    }
+    return null;
+  },
+
+  maxLength: (max) => (value) => {
+    if (!value) return null;
+    if (value.length > max) {
+      return `Must be no more than ${max} characters`;
+    }
+    return null;
+  },
+
+  date: (value) => {
+    if (!value) return null;
+    const date = new Date(value);
+    if (isNaN(date.getTime())) {
+      return 'Please enter a valid date';
+    }
+    return null;
+  },
+
+  futureDate: (value) => {
+    if (!value) return null;
+    const date = new Date(value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (date <= today) {
+      return 'Date must be in the future';
+    }
+    return null;
+  },
+
+  url: (value) => {
+    if (!value) return null;
+    try {
+      new URL(value);
+      return null;
+    } catch {
+      return 'Please enter a valid URL';
+    }
+  },
+
+  number: (value) => {
+    if (!value) return null;
+    if (isNaN(Number(value))) {
+      return 'Please enter a valid number';
+    }
+    return null;
+  },
+
+  positiveNumber: (value) => {
+    if (!value) return null;
+    const num = Number(value);
+    if (isNaN(num) || num <= 0) {
+      return 'Please enter a positive number';
+    }
+    return null;
+  },
+};
+
+/**
+ * Validate a field with multiple validators
+ */
+export function validateField(value, rules) {
+  if (!rules || rules.length === 0) return null;
+
+  for (const rule of rules) {
+    let validator;
+    let error;
+
+    if (typeof rule === 'function') {
+      validator = rule;
+    } else if (typeof rule === 'string') {
+      validator = validators[rule];
+    } else if (typeof rule === 'object' && rule.validator) {
+      validator = rule.validator;
+      error = rule.error;
+    }
+
+    if (validator) {
+      const result = validator(value);
+      if (result) {
+        return error || result;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Validate an entire form
+ */
+export function validateForm(formData, schema) {
+  const errors = {};
+
+  for (const [field, rules] of Object.entries(schema)) {
+    const value = formData[field];
+    const error = validateField(value, rules);
+    if (error) {
+      errors[field] = error;
+    }
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+}
+
+/**
+ * Create a validation hook for React forms
+ */
+export function useFormValidation(initialValues, schema) {
+  const [values, setValues] = React.useState(initialValues);
+  const [errors, setErrors] = React.useState({});
+  const [touched, setTouched] = React.useState({});
+
+  const handleChange = (field, value) => {
+    setValues((prev) => ({ ...prev, [field]: value }));
+    
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
+  const handleBlur = (field) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    
+    // Validate on blur
+    if (schema[field]) {
+      const error = validateField(values[field], schema[field]);
+      if (error) {
+        setErrors((prev) => ({ ...prev, [field]: error }));
+      }
+    }
+  };
+
+  const validate = () => {
+    const result = validateForm(values, schema);
+    setErrors(result.errors);
+    setTouched(
+      Object.keys(schema).reduce((acc, key) => ({ ...acc, [key]: true }), {})
+    );
+    return result.isValid;
+  };
+
+  const reset = () => {
+    setValues(initialValues);
+    setErrors({});
+    setTouched({});
+  };
+
+  return {
+    values,
+    errors,
+    touched,
+    handleChange,
+    handleBlur,
+    validate,
+    reset,
+    setValues,
+  };
+}
+

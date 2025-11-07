@@ -1,0 +1,203 @@
+"""
+Progress Dashboard Handler
+GET /progress/:user_id - Get multi-goal progress dashboard
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session as DBSession
+from uuid import UUID
+from typing import Optional, List
+
+from src.config.database import get_db
+from src.api.middleware.auth import get_current_user
+from src.models.goal import Goal
+from src.models.user import User
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def _get_related_subjects(subject_name: str, goal_type: Optional[str] = None) -> List[str]:
+    """Get related subject suggestions based on completed goal"""
+    subject_lower = subject_name.lower()
+    
+    # Subject-based suggestions
+    if any(kw in subject_lower for kw in ['sat', 'test prep']):
+        if 'math' in subject_lower:
+            return ["SAT English", "AP Calculus", "AP Statistics"]
+        elif 'english' in subject_lower or 'essay' in subject_lower:
+            return ["SAT Math", "AP English Literature", "AP Language"]
+        else:
+            return ["SAT Math", "SAT English", "AP Prep"]
+    
+    elif 'algebra' in subject_lower:
+        return ["Geometry", "Pre-Calculus", "AP Calculus"]
+    elif 'geometry' in subject_lower:
+        return ["Algebra 2", "Trigonometry", "AP Calculus"]
+    elif 'calculus' in subject_lower:
+        return ["AP Statistics", "Physics", "Advanced Math"]
+    
+    elif 'chemistry' in subject_lower:
+        return ["Physics", "Biology", "AP Chemistry"]
+    elif 'physics' in subject_lower:
+        return ["Chemistry", "AP Physics", "Calculus"]
+    elif 'biology' in subject_lower:
+        return ["Chemistry", "AP Biology", "Environmental Science"]
+    
+    elif 'ap' in subject_lower:
+        if 'math' in subject_lower:
+            return ["AP Statistics", "AP Physics", "Calculus BC"]
+        elif 'science' in subject_lower or 'chemistry' in subject_lower or 'physics' in subject_lower:
+            return ["AP Math", "AP Biology", "AP Environmental Science"]
+        else:
+            return ["AP Math", "AP Science", "Test Prep"]
+    
+    # Default suggestions
+    return ["Related Subject 1", "Related Subject 2"]
+
+router = APIRouter(prefix="/progress", tags=["progress"])
+
+
+@router.get("/{user_id}")
+async def get_progress(
+    user_id: UUID,
+    include_suggestions: bool = Query(True, description="Include related subject suggestions"),
+    db: DBSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get multi-goal progress dashboard data
+    
+    Called by React frontend on login
+    """
+    # Verify user has access
+    user_sub = current_user.get("sub")
+    db_user = db.query(User).filter(User.cognito_sub == user_sub).first()
+    
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get user's goals (active and recently completed)
+    active_goals = db.query(Goal).filter(
+        Goal.student_id == user_id,
+        Goal.status == "active"
+    ).all()
+    
+    # Get recently completed goals (last 30 days) for suggestions
+    from datetime import datetime, timedelta
+    recent_completed = db.query(Goal).filter(
+        Goal.student_id == user_id,
+        Goal.status == "completed",
+        Goal.completed_at >= datetime.utcnow() - timedelta(days=30)
+    ).all()
+    
+    all_goals = active_goals + recent_completed
+    
+    # Check if first login (disclaimer not shown)
+    disclaimer_required = not db_user.disclaimer_shown
+    
+    # Handle no goals scenario
+    if not active_goals:
+        return {
+            "success": True,
+            "data": {
+                "user_id": str(user_id),
+                "goals": [],
+                "insights": [],
+                "suggestions": [{
+                    "type": "onboarding",
+                    "message": "You don't have any active goals yet. Set up your first learning goal to get started!",
+                    "action": "create_goal",
+                    "suggested_subjects": ["SAT Math", "AP Chemistry", "Algebra", "Geometry"]
+                }] if include_suggestions else [],
+                "disclaimer_required": disclaimer_required,
+                "disclaimer": {
+                    "message": "Important Notice: This AI Study Companion is designed to support your learning between tutoring sessions. While I can help with practice problems, explanations, and study guidance, I'm not a replacement for your tutor. For complex topics or when you see a 'Low Confidence' label, please consult with your tutor.",
+                    "acknowledgment_required": True
+                } if disclaimer_required else None,
+                "empty_state": True
+            }
+        }
+    
+    # Build insights
+    insights = []
+    if active_goals:
+        avg_completion = sum(g.completion_percentage for g in active_goals) / len(active_goals)
+        if avg_completion > 70:
+            insights.append("You're making great progress! Keep up the excellent work!")
+        elif avg_completion < 40:
+            insights.append("Consider scheduling extra practice sessions to boost your progress")
+        elif avg_completion >= 40 and avg_completion <= 70:
+            insights.append("You're on track! Consistent practice will help you reach your goals")
+    
+    # Build suggestions if requested
+    suggestions = []
+    if include_suggestions:
+        # Suggest related subjects for completed goals
+        if recent_completed:
+            for goal in recent_completed:
+                if goal.subject:
+                    # Generate related subject suggestions based on completed goal
+                    related = _get_related_subjects(goal.subject.name, goal.goal_type)
+                    if related:
+                        suggestions.append({
+                            "type": "related_subject",
+                            "triggered_by": {
+                                "goal_id": str(goal.id),
+                                "goal_name": goal.title,
+                                "subject": goal.subject.name
+                            },
+                            "subjects": related,
+                            "message": f"Great job completing {goal.title}! Based on your success, you might enjoy:"
+                        })
+        
+        # Suggest cross-subject exploration if student has multiple goals in one area
+        math_goals = [g for g in active_goals if g.subject and any(kw in g.subject.name.lower() for kw in ['math', 'algebra', 'geometry', 'calculus'])]
+        science_goals = [g for g in active_goals if g.subject and any(kw in g.subject.name.lower() for kw in ['science', 'chemistry', 'physics', 'biology'])]
+        
+        if len(math_goals) >= 2 and not any(g.subject and 'science' in g.subject.name.lower() for g in active_goals):
+            suggestions.append({
+                "type": "cross_subject",
+                "message": "You're doing great with math! Consider exploring science subjects too.",
+                "subjects": ["Chemistry", "Physics", "Biology"]
+            })
+        elif len(science_goals) >= 2 and not any(g.subject and 'math' in g.subject.name.lower() for g in active_goals):
+            suggestions.append({
+                "type": "cross_subject",
+                "message": "You're excelling in science! Math skills can complement your studies.",
+                "subjects": ["Algebra", "Geometry", "Calculus"]
+            })
+    
+    return {
+        "success": True,
+        "data": {
+            "user_id": str(user_id),
+            "goals": [
+                {
+                    "goal_id": str(g.id),
+                    "subject": g.subject.name if g.subject else "Unknown",
+                    "goal_type": g.goal_type,
+                    "title": g.title,
+                    "completion_percentage": float(g.completion_percentage),
+                    "current_streak": g.current_streak,
+                    "xp_earned": g.xp_earned,
+                    "status": g.status,
+                    "target_date": str(g.target_completion_date) if g.target_completion_date else None
+                }
+                for g in active_goals
+            ],
+            "insights": insights,
+            "suggestions": suggestions,
+            "disclaimer_required": disclaimer_required,
+            "disclaimer": {
+                "message": "Important Notice: This AI Study Companion is designed to support your learning between tutoring sessions. While I can help with practice problems, explanations, and study guidance, I'm not a replacement for your tutor. For complex topics or when you see a 'Low Confidence' label, please consult with your tutor.",
+                "acknowledgment_required": True
+            } if disclaimer_required else None,
+            "stats": {
+                "total_goals": len(active_goals),
+                "completed_goals": len(recent_completed),
+                "average_completion": float(sum(g.completion_percentage for g in active_goals) / len(active_goals)) if active_goals else 0.0
+            }
+        }
+    }
+

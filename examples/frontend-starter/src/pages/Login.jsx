@@ -1,0 +1,117 @@
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import { useFormValidation } from '../hooks/useFormValidation';
+import { validators } from '../utils/validation';
+import './Login.css';
+
+function Login() {
+  const { login, isAuthenticated } = useAuth();
+  const { success, error: showError } = useToast();
+  const navigate = useNavigate();
+
+  const loginSchema = {
+    email: [validators.required, validators.email],
+    password: [validators.required, validators.minLength(6)],
+  };
+
+  const {
+    values,
+    errors,
+    touched,
+    handleChange,
+    handleBlur,
+    validate,
+  } = useFormValidation(
+    { email: '', password: '' },
+    loginSchema
+  );
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    console.log('[LOGIN PAGE] Auth state check:', { isAuthenticated, hasToken: !!localStorage.getItem('auth_token') });
+    if (isAuthenticated || localStorage.getItem('auth_token')) {
+      console.log('[LOGIN PAGE] Already authenticated, redirecting to dashboard');
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+  
+  if (isAuthenticated || localStorage.getItem('auth_token')) {
+    return <div>Redirecting...</div>;
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validate()) {
+      showError('Please fix the errors in the form');
+      return;
+    }
+    
+    console.log('[LOGIN] Starting login process', { email: values.email, password: '***' });
+
+    const result = await login(values.email, values.password);
+    console.log('[LOGIN] Login result:', result);
+    
+    if (result.success) {
+      console.log('[LOGIN] Login successful, checking auth state...');
+      success('Login successful!');
+      
+      setTimeout(() => {
+        const token = localStorage.getItem('auth_token');
+        console.log('[LOGIN] After delay - token exists:', !!token);
+        console.log('[LOGIN] Navigating to dashboard...');
+        navigate('/dashboard', { replace: true });
+      }, 100);
+    } else {
+      console.error('[LOGIN] Login failed:', result.error);
+      showError(result.error || 'Login failed');
+    }
+  };
+
+  return (
+    <div className="login">
+      <div className="login-container">
+              <h1>AI Study Companion</h1>
+              <form onSubmit={handleSubmit}>
+                <div className="form-group">
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={values.email}
+                    onChange={(e) => handleChange('email', e.target.value)}
+                    onBlur={() => handleBlur('email')}
+                    required
+                    className={touched.email && errors.email ? 'error' : ''}
+                  />
+                  {touched.email && errors.email && (
+                    <span className="error-message">{errors.email}</span>
+                  )}
+                </div>
+                <div className="form-group">
+                  <input
+                    type="password"
+                    placeholder="Password"
+                    value={values.password}
+                    onChange={(e) => handleChange('password', e.target.value)}
+                    onBlur={() => handleBlur('password')}
+                    required
+                    className={touched.password && errors.password ? 'error' : ''}
+                  />
+                  {touched.password && errors.password && (
+                    <span className="error-message">{errors.password}</span>
+                  )}
+                </div>
+                <button type="submit">Login</button>
+              </form>
+        <p className="demo-note">
+          Demo: Use any email/password to login
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default Login;
+
