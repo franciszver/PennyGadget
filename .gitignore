@@ -132,3 +132,6 @@ cf-api-config.json
 
 # Temporary files
 examples/frontend-starter/src/cache-bust.txt
+
+# Scripts with sensitive data (user IDs, emails, etc.)
+scripts/setup_goal_complete_demo.py

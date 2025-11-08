@@ -66,8 +66,15 @@ def _get_related_subjects(subject_name: str, goal_type: Optional[str] = None) ->
         else:
             return ["AP Math", "AP Science", "Test Prep"]
     
-    # Default suggestions
-    return ["Related Subject 1", "Related Subject 2"]
+    elif 'basic math' in subject_lower or ('math' in subject_lower and 'basic' in subject_lower):
+        # Basic Math → Algebra is the natural next step
+        return ["Algebra", "Geometry", "Pre-Calculus"]
+    elif 'math' in subject_lower and not any(kw in subject_lower for kw in ['algebra', 'geometry', 'calculus', 'trig', 'statistics', 'pre-calc', 'precalc']):
+        # General math (not specific) → suggest foundational next steps
+        return ["Algebra", "Geometry", "Pre-Calculus"]
+    
+    # Default suggestions - provide more helpful defaults
+    return ["Algebra", "Geometry"]  # Better default than placeholder text
 
 router = APIRouter(prefix="/progress", tags=["progress"])
 
