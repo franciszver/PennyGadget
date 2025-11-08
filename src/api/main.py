@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="AI Study Companion API",
     description="Persistent AI agent supporting students between tutoring sessions",
-    version="1.0.0",
+    version="1.1.4",
     lifespan=lifespan
 )
 
@@ -83,7 +83,7 @@ async def root():
     """Root endpoint"""
     return {
         "service": "AI Study Companion API",
-        "version": "1.0.0",
+        "version": "1.1.4",
         "status": "operational"
     }
 
