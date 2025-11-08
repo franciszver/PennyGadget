@@ -13,6 +13,8 @@ from typing import Optional
 import json
 
 from src.config.settings import settings
+from src.config.database import get_db
+from sqlalchemy.orm import Session as DBSession
 
 
 security = HTTPBearer()
@@ -151,10 +153,28 @@ def require_role(allowed_roles: list[str]):
         def admin_route(user: dict = Depends(require_role(["admin"]))):
             ...
     """
-    async def role_checker(user: dict = Depends(get_current_user)) -> dict:
+    async def role_checker(
+        user: dict = Depends(get_current_user),
+        db: DBSession = Depends(get_db)
+    ) -> dict:
+        from src.models.user import User
+        
         # Extract role from token (may be in 'cognito:groups' or custom claim)
         user_groups = user.get("cognito:groups", [])
-        user_role = user.get("role") or (user_groups[0] if user_groups else None)
+        token_role = user.get("role") or (user_groups[0] if user_groups else None)
+        
+        # For demo accounts, use token role
+        if user.get("sub") == "demo-user":
+            user_role = token_role or "student"
+        else:
+            # For real users, check database role (more reliable)
+            user_sub = user.get("sub")
+            db_user = db.query(User).filter(User.cognito_sub == user_sub).first()
+            if db_user:
+                user_role = db_user.role
+            else:
+                # Fallback to token role if user not in database yet
+                user_role = token_role
         
         if not user_role or user_role not in allowed_roles:
             raise HTTPException(
