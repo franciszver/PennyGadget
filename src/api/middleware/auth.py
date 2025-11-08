@@ -98,16 +98,9 @@ async def get_current_user(
     """
     token = credentials.credentials
     
-    # Development mode: Support mock tokens for demo accounts
+    # Support mock tokens for demo accounts ONLY in development mode
     if settings.environment == "development" and token.startswith("mock-token-"):
-        # Extract email from token or use a default demo user
-        # The frontend generates tokens like "mock-token-1234567890"
-        # We'll look up the user by checking the database for demo accounts
-        from src.config.database import get_db_session
-        from src.models.user import User
-        
-        # Try to find demo user - we'll need to get email from somewhere
-        # For now, return a mock payload that will work with demo accounts
+        # Return a mock payload that will work with demo accounts
         # The progress endpoint will handle looking up by user_id from the URL
         return {
             "sub": "demo-user",
@@ -116,7 +109,13 @@ async def get_current_user(
             "cognito:groups": ["students"]
         }
     
-    # Production: Verify real Cognito token
+    # Production: Verify real Cognito token (reject mock tokens)
+    if token.startswith("mock-token-"):
+        raise HTTPException(
+            status_code=401,
+            detail="Mock tokens are not allowed in production mode"
+        )
+    
     payload = verify_token(token)
     
     return payload
@@ -135,7 +134,7 @@ async def get_current_user_optional(
     try:
         token = credentials.credentials
         
-        # Development mode: Support mock tokens for demo accounts
+        # Support mock tokens for demo accounts ONLY in development mode
         if settings.environment == "development" and token.startswith("mock-token-"):
             return {
                 "sub": "demo-user",
@@ -143,6 +142,10 @@ async def get_current_user_optional(
                 "role": "student",
                 "cognito:groups": ["students"]
             }
+        
+        # Production: Reject mock tokens
+        if token.startswith("mock-token-"):
+            return None
         
         payload = verify_token(token)
         return payload

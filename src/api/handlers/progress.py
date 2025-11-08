@@ -83,9 +83,10 @@ async def get_progress(
     
     Called by React frontend on login
     """
-    # In development mode with mock auth, skip cognito_sub lookup
-    # Just verify the user_id exists in the database
-    if settings.environment == "development" and current_user.get("sub") == "demo-user":
+    # Support mock auth tokens (used for demo accounts)
+    # When using mock tokens, current_user.sub will be "demo-user"
+    if current_user.get("sub") == "demo-user":
+        # Mock auth: Just verify the user_id exists in the database
         db_user = db.query(User).filter(User.id == user_id).first()
         if not db_user:
             raise HTTPException(status_code=404, detail="User not found")

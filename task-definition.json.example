@@ -1,0 +1,80 @@
+{
+  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/elevareai-ecs-task-role",
+  "networkMode": "awsvpc",
+  "cpu": "256",
+  "requiresCompatibilities": ["FARGATE"],
+  "containerDefinitions": [
+    {
+      "name": "elevareai-api",
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs",
+          "awslogs-group": "/ecs/elevareai-api"
+        }
+      },
+      "environment": [
+        {
+          "value": "YOUR_DB_ENDPOINT.rds.amazonaws.com",
+          "name": "DB_HOST"
+        },
+        {
+          "value": "5432",
+          "name": "DB_PORT"
+        },
+        {
+          "value": "elevareai",
+          "name": "DB_NAME"
+        },
+        {
+          "value": "elevareai_admin",
+          "name": "DB_USER"
+        },
+        {
+          "value": "YOUR_DB_PASSWORD",
+          "name": "DB_PASSWORD"
+        },
+        {
+          "value": "YOUR_COGNITO_USER_POOL_ID",
+          "name": "COGNITO_USER_POOL_ID"
+        },
+        {
+          "value": "YOUR_COGNITO_CLIENT_ID",
+          "name": "COGNITO_CLIENT_ID"
+        },
+        {
+          "value": "us-east-1",
+          "name": "COGNITO_REGION"
+        },
+        {
+          "value": "production",
+          "name": "ENVIRONMENT"
+        },
+        {
+          "value": "INFO",
+          "name": "LOG_LEVEL"
+        }
+      ],
+      "essential": true,
+      "image": "ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/elevareai-api:latest",
+      "portMappings": [
+        {
+          "protocol": "tcp",
+          "containerPort": 8000
+        }
+      ],
+      "healthCheck": {
+        "retries": 3,
+        "command": ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"],
+        "timeout": 5,
+        "interval": 30,
+        "startPeriod": 60
+      }
+    }
+  ],
+  "family": "elevareai-api",
+  "taskRoleArn": "arn:aws:iam::ACCOUNT_ID:role/elevareai-ecs-task-role",
+  "memory": "512"
+}
+

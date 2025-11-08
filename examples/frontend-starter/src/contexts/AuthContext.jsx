@@ -1,6 +1,17 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { signIn as cognitoSignIn, signOut as cognitoSignOut } from '../utils/cognito';
 
 const AuthContext = createContext();
+
+// Helper to detect if we're in development mode
+const isDevelopment = () => {
+  return (
+    import.meta.env.DEV ||
+    import.meta.env.MODE === 'development' ||
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1'
+  );
+};
 
 export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -11,12 +22,14 @@ export function AuthProvider({ children }) {
     console.log('[AUTH] Initializing auth context...');
     
     // Demo account UUIDs mapping (must match login function)
+    // Updated with actual UUIDs from database
     const demoAccountIds = {
       'demo_goal_complete@demo.com': '180bcad6-380e-4a2f-809b-032677fcc721',
       'demo_sat_complete@demo.com': '0281a3c5-e9aa-4d65-ad33-f49a80a77a23',
       'demo_chemistry@demo.com': '063009da-20a4-4f53-8f67-f06573f7195e',
       'demo_low_sessions@demo.com': 'e8bf67c3-57e6-405b-a1b5-80ac75aaf034',
       'demo_multi_goal@demo.com': 'c02cb7f8-e63c-4945-9406-320e1d9046f3',
+      'demo_multi_goals@demo.com': 'c02cb7f8-e63c-4945-9406-320e1d9046f3', // Support plural version
       'demo_qa@demo.com': 'c0227285-166a-4a90-b7fd-d4d7e7ff4e39'
     };
     
@@ -162,58 +175,111 @@ export function AuthProvider({ children }) {
     try {
       console.log('[AUTH] Login called with email:', email);
       
-      // Demo account UUIDs mapping
-      // Note: These will be generated when create_demo_users.py is run
-      // The script will output the actual UUIDs - update this mapping after running the script
+      // Demo account UUIDs mapping - Updated with actual UUIDs from database
       const demoAccountIds = {
         'demo_goal_complete@demo.com': '180bcad6-380e-4a2f-809b-032677fcc721',
         'demo_sat_complete@demo.com': '0281a3c5-e9aa-4d65-ad33-f49a80a77a23',
         'demo_chemistry@demo.com': '063009da-20a4-4f53-8f67-f06573f7195e',
         'demo_low_sessions@demo.com': 'e8bf67c3-57e6-405b-a1b5-80ac75aaf034',
         'demo_multi_goal@demo.com': 'c02cb7f8-e63c-4945-9406-320e1d9046f3',
+        'demo_multi_goals@demo.com': 'c02cb7f8-e63c-4945-9406-320e1d9046f3', // Support plural version
         'demo_qa@demo.com': 'c0227285-166a-4a90-b7fd-d4d7e7ff4e39'
       };
       
-      // In production, this would use AWS Cognito
-      // For now, mock authentication
-      const token = 'mock-token-' + Date.now();
-      // Use actual UUID for demo accounts, otherwise generate a fake one
-      const userId = demoAccountIds[email] || 'user-' + email.replace('@', '-').replace('.', '-');
+      const devMode = isDevelopment();
+      console.log('[AUTH] Environment mode:', devMode ? 'development' : 'production');
       
-      console.log('[AUTH] Generated token and userId:', { token: token.substring(0, 20) + '...', userId });
-      
-      // Store token and user info
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('user_id', userId);
-      localStorage.setItem('user_role', 'student');
-      localStorage.setItem('user_email', email); // Store email for validation
-      
-      console.log('[AUTH] Stored in localStorage');
-      console.log('[AUTH] Verifying storage:', {
-        token: localStorage.getItem('auth_token') ? 'exists' : 'missing',
-        userId: localStorage.getItem('user_id'),
-        role: localStorage.getItem('user_role')
-      });
-      
-      // Update state synchronously
-      setIsAuthenticated(true);
-      setUser({ id: userId, role: 'student', email: email });
-      
-      console.log('[AUTH] State updated - isAuthenticated: true, user:', { id: userId, role: 'student' });
-      
-      // Return success - navigation will happen in Login component
-      return { success: true };
+      if (devMode) {
+        // Development mode: Only allow demo accounts with password "demo123"
+        if (!demoAccountIds[email]) {
+          console.log('[AUTH] Rejected non-demo account in development mode:', email);
+          return { success: false, error: 'Invalid credentials' };
+        }
+        
+        if (password !== 'demo123') {
+          console.log('[AUTH] Rejected incorrect password for demo account');
+          return { success: false, error: 'Invalid password' };
+        }
+        
+        // Use actual UUID for demo account
+        const userId = demoAccountIds[email];
+        const token = 'mock-token-' + Date.now();
+        
+        console.log('[AUTH] Demo account login successful:', { email, userId });
+        
+        // Store token and user info
+        localStorage.setItem('auth_token', token);
+        localStorage.setItem('user_id', userId);
+        localStorage.setItem('user_role', 'student');
+        localStorage.setItem('user_email', email);
+        
+        // Update state synchronously
+        setIsAuthenticated(true);
+        setUser({ id: userId, role: 'student', email: email });
+        
+        return { success: true };
+      } else {
+        // Production mode: Use AWS Cognito
+        console.log('[AUTH] Using Cognito authentication for production');
+        
+        try {
+          const result = await cognitoSignIn(email, password);
+          
+          // Store Cognito tokens
+          localStorage.setItem('auth_token', result.accessToken);
+          localStorage.setItem('id_token', result.idToken);
+          localStorage.setItem('refresh_token', result.refreshToken);
+          localStorage.setItem('user_id', result.user.sub);
+          localStorage.setItem('user_role', 'student');
+          localStorage.setItem('user_email', result.user.email);
+          
+          console.log('[AUTH] Cognito login successful:', { email: result.user.email, sub: result.user.sub });
+          
+          // Update state synchronously
+          setIsAuthenticated(true);
+          setUser({ id: result.user.sub, role: 'student', email: result.user.email });
+          
+          return { success: true };
+        } catch (cognitoError) {
+          console.error('[AUTH] Cognito login error:', cognitoError);
+          
+          // Handle specific Cognito errors
+          let errorMessage = 'Login failed';
+          if (cognitoError.code === 'NotAuthorizedException') {
+            errorMessage = 'Incorrect email or password';
+          } else if (cognitoError.code === 'UserNotConfirmedException') {
+            errorMessage = 'Please verify your email before logging in';
+          } else if (cognitoError.message) {
+            errorMessage = cognitoError.message;
+          }
+          
+          return { success: false, error: errorMessage };
+        }
+      }
     } catch (error) {
       console.error('[AUTH] Login error:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error.message || 'Login failed' };
     }
   };
 
   const logout = () => {
+    // Clear all auth-related localStorage items
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('id_token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('user_id');
     localStorage.removeItem('user_role');
     localStorage.removeItem('user_email');
+    
+    // Sign out from Cognito if in production
+    if (!isDevelopment()) {
+      try {
+        cognitoSignOut();
+      } catch (err) {
+        console.warn('[AUTH] Error signing out from Cognito:', err);
+      }
+    }
+    
     setIsAuthenticated(false);
     setUser(null);
   };

@@ -8,6 +8,7 @@ import Goals from './pages/Goals';
 import Settings from './pages/Settings';
 import Messaging from './pages/Messaging';
 import Login from './pages/Login';
+import Signup from './pages/Signup';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import Navbar from './components/Navbar';
@@ -61,6 +62,7 @@ function AppContent() {
         <Navbar />
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           <Route
             path="/dashboard"
             element={

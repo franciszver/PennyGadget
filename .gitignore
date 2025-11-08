@@ -116,3 +116,14 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# AWS Deployment Files (contain sensitive credentials)
+aws-deployment-vars.json
+task-definition.json
+task-def-dev.json
+task-def-update.json
+bucket-policy.json
+trust-policy.json
+s3-website-config.json
+cloudfront-config.json
+cloudfront-update.json

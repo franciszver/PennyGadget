@@ -4,7 +4,7 @@ Advanced personalization for nudges based on student data
 """
 
 from typing import Dict, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session as DBSession
 from sqlalchemy import func
 
@@ -40,19 +40,21 @@ class NudgePersonalization:
             return {}
         
         # Get recent activity
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=30)
         recent_sessions = self.db.query(SessionModel).filter(
             SessionModel.student_id == student_uuid,
-            SessionModel.session_date >= datetime.utcnow() - timedelta(days=30)
+            SessionModel.session_date >= cutoff_date
         ).all()
         
         recent_practice = self.db.query(PracticeAssignment).filter(
             PracticeAssignment.student_id == student_uuid,
-            PracticeAssignment.completed_at >= datetime.utcnow() - timedelta(days=30)
+            PracticeAssignment.completed_at.isnot(None),
+            PracticeAssignment.completed_at >= cutoff_date
         ).all()
         
         recent_qa = self.db.query(QAInteraction).filter(
             QAInteraction.student_id == student_uuid,
-            QAInteraction.created_at >= datetime.utcnow() - timedelta(days=30)
+            QAInteraction.created_at >= cutoff_date
         ).all()
         
         # Calculate patterns
@@ -97,7 +99,14 @@ class NudgePersonalization:
         if not insights:
             insights = self.get_student_insights(student_id)
         
-        student = self.db.query(User).filter(User.id == student_id).first()
+        # Convert student_id to UUID for query
+        try:
+            from uuid import UUID as UUIDType
+            student_uuid = UUIDType(student_id) if isinstance(student_id, str) else student_id
+        except (ValueError, TypeError):
+            student_uuid = student_id
+        
+        student = self.db.query(User).filter(User.id == student_uuid).first()
         student_name = student.profile.get("name") if student and student.profile else None
         
         # Personalize based on type

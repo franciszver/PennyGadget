@@ -71,7 +71,13 @@ async def check_nudge(
                 from src.services.notifications.email import EmailService
                 email_service = EmailService(db)
                 
-                user = db.query(User).filter(User.id == request.student_id).first()
+                # Convert student_id to UUID for query
+                try:
+                    student_uuid = UUID(request.student_id) if isinstance(request.student_id, str) else request.student_id
+                except (ValueError, TypeError):
+                    student_uuid = request.student_id
+                
+                user = db.query(User).filter(User.id == student_uuid).first()
                 if user:
                     email_service.send_nudge_notification(
                         to_email=user.email,
@@ -136,7 +142,12 @@ async def get_user_nudges(
     engine = NudgeEngine(db)
     
     # Check for inactivity nudge first (most important - should appear every login until resolved)
-    inactivity_result = engine.should_send_nudge(str(user_id), "inactivity")
+    try:
+        inactivity_result = engine.should_send_nudge(str(user_id), "inactivity")
+    except Exception as e:
+        logger.error(f"Error checking inactivity nudge: {str(e)}", exc_info=True)
+        # If checking fails, just return existing nudges
+        inactivity_result = {"should_send": False, "reason": "check_failed"}
     if inactivity_result.get("should_send"):
         # Check if there's already an unopened inactivity nudge from today
         # Use timezone-aware comparison
@@ -154,6 +165,13 @@ async def get_user_nudges(
         if not recent_inactivity:
             # Create the nudge directly instead of calling check_nudge to avoid recursion
             try:
+                # Ensure suggestions is a list
+                suggestions = inactivity_result["nudge"].get("suggestions")
+                if suggestions is None:
+                    suggestions = []
+                elif not isinstance(suggestions, list):
+                    suggestions = list(suggestions) if suggestions else []
+                
                 # Create nudge record
                 nudge = Nudge(
                     id=uuid.uuid4(),
@@ -161,10 +179,10 @@ async def get_user_nudges(
                     type=inactivity_result["nudge"]["type"],
                     channel=inactivity_result["nudge"]["channel"],
                     message=inactivity_result["nudge"]["message"],
-                    personalized=inactivity_result["nudge"]["personalized"],
+                    personalized=inactivity_result["nudge"].get("personalized", True),
                     sent_at=datetime.now(timezone.utc),
                     trigger_reason=inactivity_result["nudge"].get("trigger_reason"),
-                    suggestions_made=inactivity_result["nudge"].get("suggestions", [])
+                    suggestions_made=suggestions
                 )
                 db.add(nudge)
                 db.commit()
@@ -179,13 +197,26 @@ async def get_user_nudges(
             except Exception as e:
                 logger.error(f"Failed to create inactivity nudge: {str(e)}", exc_info=True)
                 db.rollback()
-                # Re-raise to see the error in API response
-                raise HTTPException(status_code=500, detail=f"Failed to create nudge: {str(e)}")
+                # Return error details in response instead of raising
+                import traceback
+                error_details = traceback.format_exc()
+                logger.error(f"Full traceback: {error_details}")
+                raise HTTPException(
+                    status_code=500, 
+                    detail=f"Failed to create nudge: {str(e)}. Check logs for details."
+                )
     elif not nudges:
         # Only check for login nudge if no inactivity nudge and no unopened nudges
         login_result = engine.should_send_nudge(str(user_id), "login")
         if login_result.get("should_send"):
             try:
+                # Ensure suggestions is a list
+                suggestions = login_result["nudge"].get("suggestions")
+                if suggestions is None:
+                    suggestions = []
+                elif not isinstance(suggestions, list):
+                    suggestions = list(suggestions) if suggestions else []
+                
                 # Create nudge record directly
                 nudge = Nudge(
                     id=uuid.uuid4(),
@@ -193,10 +224,10 @@ async def get_user_nudges(
                     type=login_result["nudge"]["type"],
                     channel=login_result["nudge"]["channel"],
                     message=login_result["nudge"]["message"],
-                    personalized=login_result["nudge"]["personalized"],
+                    personalized=login_result["nudge"].get("personalized", True),
                     sent_at=datetime.now(timezone.utc),
                     trigger_reason=login_result["nudge"].get("trigger_reason"),
-                    suggestions_made=login_result["nudge"].get("suggestions", [])
+                    suggestions_made=suggestions
                 )
                 db.add(nudge)
                 db.commit()
@@ -208,7 +239,7 @@ async def get_user_nudges(
                     Nudge.opened_at.is_(None)
                 ).order_by(Nudge.sent_at.desc()).limit(5).all()
             except Exception as e:
-                logger.error(f"Failed to create login nudge: {str(e)}")
+                logger.error(f"Failed to create login nudge: {str(e)}", exc_info=True)
                 db.rollback()
     
     return {

@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+// Use proxy in development, direct URL in production
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+  (import.meta.env.DEV ? '/api/v1' : 'http://localhost:8000/api/v1');
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -42,8 +44,11 @@ apiClient.interceptors.response.use(
       if (isAuthEndpoint || !isDevelopment) {
         console.log('[API] 401 on auth endpoint or production - clearing token');
         localStorage.removeItem('auth_token');
+        localStorage.removeItem('id_token');
+        localStorage.removeItem('refresh_token');
         localStorage.removeItem('user_id');
         localStorage.removeItem('user_role');
+        localStorage.removeItem('user_email');
         window.location.href = '/login';
       } else {
         console.log('[API] 401 in development (mock auth) - keeping token, just logging error');

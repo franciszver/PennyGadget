@@ -5,11 +5,11 @@ POST /goals - Create a new goal
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session as DBSession
+from sqlalchemy.orm import Session as DBSession, joinedload
 from pydantic import BaseModel
 from uuid import UUID
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.config.database import get_db
 from src.api.middleware.auth import get_current_user, get_current_user_optional
@@ -47,10 +47,16 @@ async def get_goals(
     """
     Get all goals for a student
     """
+    # Convert student_id string to UUID
+    try:
+        student_uuid = UUID(student_id)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="Invalid student_id format")
+    
     # Development mode: Support mock tokens
     if settings.environment == "development" and current_user and current_user.get("sub") == "demo-user":
         # Verify user exists
-        db_user = db.query(User).filter(User.id == student_id).first()
+        db_user = db.query(User).filter(User.id == student_uuid).first()
         if not db_user:
             raise HTTPException(status_code=404, detail="User not found")
     else:
@@ -63,67 +69,96 @@ async def get_goals(
                 raise HTTPException(status_code=404, detail="User not found")
             
             # Verify the student_id matches the authenticated user
-            if db_user.id != UUID(student_id):
+            if db_user.id != student_uuid:
                 raise HTTPException(status_code=403, detail="Access denied")
         else:
             # No auth - allow in development
             if settings.environment != "development":
                 raise HTTPException(status_code=401, detail="Authentication required")
-            db_user = db.query(User).filter(User.id == student_id).first()
+            db_user = db.query(User).filter(User.id == student_uuid).first()
             if not db_user:
                 raise HTTPException(status_code=404, detail="User not found")
     
-    goals = db.query(Goal).filter(Goal.student_id == student_id).order_by(Goal.created_at.desc()).all()
+    # Eager load subject relationship to avoid lazy loading issues
+    goals = db.query(Goal).options(joinedload(Goal.subject)).filter(Goal.student_id == student_uuid).order_by(Goal.created_at.desc()).all()
     
     # Get Elo ratings for each goal's subject
     goals_with_ratings = []
     for g in goals:
-        goal_data = {
-            "id": str(g.id),
-            "title": g.title,
-            "description": g.description,
-            "goal_type": g.goal_type,
-            "subject_id": str(g.subject_id) if g.subject_id else None,
-            "subject": g.subject.name if g.subject else None,
-            "status": g.status,
-            "completion_percentage": float(g.completion_percentage),
-            "target_completion_date": g.target_completion_date.isoformat() if g.target_completion_date else None,
-            "completed_at": g.completed_at.isoformat() if g.completed_at else None,
-            "current_streak": g.current_streak,
-            "xp_earned": g.xp_earned,
-            "created_at": g.created_at.isoformat() if g.created_at else None,
-        }
-        
-        # Get Elo rating for this goal's subject
-        if g.subject_id:
-            rating = db.query(StudentRating).filter(
-                StudentRating.student_id == UUID(student_id),
-                StudentRating.subject_id == g.subject_id
-            ).first()
+        try:
+            # Helper to safely format datetime
+            def format_datetime(dt):
+                if dt is None:
+                    return None
+                if hasattr(dt, 'isoformat'):
+                    return dt.isoformat()
+                return str(dt)
             
-            if rating:
-                goal_data["elo_rating"] = rating.rating
-                goal_data["elo_rating_updated"] = rating.last_updated.isoformat() if rating.last_updated else None
+            goal_data = {
+                "id": str(g.id),
+                "title": g.title,
+                "description": g.description,
+                "goal_type": g.goal_type,
+                "subject_id": str(g.subject_id) if g.subject_id else None,
+                "subject": g.subject.name if (g.subject and hasattr(g.subject, 'name')) else None,
+                "status": g.status,
+                "completion_percentage": float(g.completion_percentage) if g.completion_percentage is not None else 0.0,
+                "target_completion_date": format_datetime(g.target_completion_date),
+                "completed_at": format_datetime(g.completed_at),
+                "current_streak": g.current_streak or 0,
+                "xp_earned": g.xp_earned or 0,
+                "created_at": format_datetime(g.created_at),
+            }
+            
+            # Get Elo rating for this goal's subject
+            if g.subject_id:
+                rating = db.query(StudentRating).filter(
+                    StudentRating.student_id == student_uuid,
+                    StudentRating.subject_id == g.subject_id
+                ).first()
+                
+                if rating:
+                    goal_data["elo_rating"] = float(rating.rating) if rating.rating is not None else settings.elo_default_rating
+                    goal_data["elo_rating_updated"] = format_datetime(rating.last_updated)
+                else:
+                    # No rating yet - use default
+                    goal_data["elo_rating"] = settings.elo_default_rating
+                    goal_data["elo_rating_updated"] = None
             else:
-                # No rating yet - use default
-                goal_data["elo_rating"] = settings.elo_default_rating
+                goal_data["elo_rating"] = None
                 goal_data["elo_rating_updated"] = None
-        else:
-            goal_data["elo_rating"] = None
-            goal_data["elo_rating_updated"] = None
-        
-        # Get question count for this goal (for daily cap display)
-        # Count only questions from today (UTC)
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        question_count = db.query(QAInteraction).filter(
-            QAInteraction.student_id == UUID(student_id),
-            QAInteraction.goal_id == g.id,
-            QAInteraction.created_at >= today_start
-        ).count()
-        goal_data["question_count"] = question_count
-        goal_data["question_limit"] = 20
-        
-        goals_with_ratings.append(goal_data)
+            
+            # Get question count for this goal (for daily cap display)
+            # Count only questions from today (UTC)
+            # Note: goal_id column may not exist if migration hasn't been run
+            # Use a savepoint to isolate errors so they don't abort the entire transaction
+            question_count = 0
+            savepoint = db.begin_nested()  # Create a savepoint
+            try:
+                today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+                question_count = db.query(QAInteraction).filter(
+                    QAInteraction.student_id == student_uuid,
+                    QAInteraction.goal_id == g.id,
+                    QAInteraction.created_at >= today_start
+                ).count()
+                savepoint.commit()  # Commit the savepoint if successful
+            except Exception as qa_error:
+                savepoint.rollback()  # Rollback only the savepoint, not the entire transaction
+                # If goal_id column doesn't exist, just set to 0
+                error_str = str(qa_error).lower()
+                if 'goal_id' in error_str and ('does not exist' in error_str or 'undefinedcolumn' in error_str):
+                    logger.debug(f"goal_id column doesn't exist, skipping question count for goal {g.id}")
+                else:
+                    logger.warning(f"Could not query QAInteraction for goal {g.id}: {str(qa_error)}")
+                question_count = 0
+            goal_data["question_count"] = question_count
+            goal_data["question_limit"] = 20
+            
+            goals_with_ratings.append(goal_data)
+        except Exception as e:
+            logger.error(f"Error processing goal {g.id}: {str(e)}", exc_info=True)
+            # Skip this goal but continue with others
+            continue
     
     return {
         "success": True,

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useFormValidation } from '../hooks/useFormValidation';
@@ -109,8 +109,8 @@ function Login() {
                 </div>
                 <button type="submit">Login</button>
               </form>
-        <p className="demo-note">
-          Demo: Use any email/password to login
+        <p style={{ marginTop: '1rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+          Don't have an account? <Link to="/signup" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Sign up</Link>
         </p>
       </div>
     </div>

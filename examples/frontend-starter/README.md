@@ -14,8 +14,17 @@ npm install
 ### 2. Configure Environment
 Create `.env.local`:
 ```env
+# API Configuration
 VITE_API_BASE_URL=http://localhost:8000/api/v1
+
+# AWS Cognito Configuration (Required for production)
+# Get these values from AWS Cognito Console
+VITE_COGNITO_USER_POOL_ID=YOUR_COGNITO_USER_POOL_ID
+VITE_COGNITO_CLIENT_ID=YOUR_COGNITO_CLIENT_ID
+VITE_COGNITO_REGION=us-east-1
 ```
+
+**Note**: In development mode, demo accounts are available. In production, Cognito configuration is required.
 
 ### 3. Start Development Server
 ```bash
@@ -150,16 +159,26 @@ src/
 
 ## 🔐 Authentication
 
-### Current Implementation
-- Mock authentication (localStorage)
-- Ready for AWS Cognito integration
-- Token management
+### Implementation
+- **Development Mode**: Demo accounts available (6 pre-configured accounts with password `demo123`)
+- **Production Mode**: AWS Cognito authentication required
+- Environment-based authentication switching
+- Token management (mock tokens in dev, Cognito JWT in production)
 - Protected routes
 
-### To Integrate Cognito
-1. Install AWS Amplify
-2. Configure Cognito
-3. Replace mock auth in `AuthContext.jsx`
+### Demo Accounts (Development Only)
+- `demo_goal_complete@demo.com` / `demo123`
+- `demo_sat_complete@demo.com` / `demo123`
+- `demo_chemistry@demo.com` / `demo123`
+- `demo_low_sessions@demo.com` / `demo123`
+- `demo_multi_goal@demo.com` / `demo123`
+- `demo_qa@demo.com` / `demo123`
+
+### Production Setup
+1. Configure Cognito environment variables (see `.env.example`)
+2. Users must sign up via the `/signup` page
+3. Email verification may be required (configured in Cognito)
+4. Login uses Cognito authentication
 
 ---
 

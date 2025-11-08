@@ -7,6 +7,7 @@ from typing import Optional, Dict, List
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session as DBSession
 from sqlalchemy import func, and_
+from uuid import UUID
 
 from src.models.user import User
 from src.models.session import Session as SessionModel
@@ -34,7 +35,13 @@ class NudgeEngine:
         Returns:
             dict with 'should_send' (bool) and 'nudge' data if True
         """
-        user = self.db.query(User).filter(User.id == user_id).first()
+        # Convert string UUID to UUID object for query
+        try:
+            user_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+        except (ValueError, TypeError):
+            return {"should_send": False, "reason": "invalid_user_id"}
+        
+        user = self.db.query(User).filter(User.id == user_uuid).first()
         if not user:
             return {"should_send": False, "reason": "user_not_found"}
         
@@ -42,13 +49,13 @@ class NudgeEngine:
         now = datetime.now(timezone.utc)
         today = now.date()
         nudge_count_today = self.db.query(Nudge).filter(
-            Nudge.user_id == user_id,
+            Nudge.user_id == user_uuid,
             func.date(Nudge.sent_at) == today
         ).count()
         
         # Check if there are unopened nudges (if yes, don't send new ones)
         unopened_nudges = self.db.query(Nudge).filter(
-            Nudge.user_id == user_id,
+            Nudge.user_id == user_uuid,
             Nudge.opened_at.is_(None),
             Nudge.sent_at >= now - timedelta(days=7)
         ).count()
@@ -73,11 +80,11 @@ class NudgeEngine:
         
         # Check based on type
         if check_type == "inactivity":
-            return self._check_inactivity_nudge(user_id, user)
+            return self._check_inactivity_nudge(str(user_uuid), user)
         elif check_type == "goal_completion":
-            return self._check_goal_completion_nudge(user_id, user)
+            return self._check_goal_completion_nudge(str(user_uuid), user)
         elif check_type == "login":
-            return self._check_login_nudge(user_id, user)
+            return self._check_login_nudge(str(user_uuid), user)
         else:
             return {"should_send": False, "reason": "unknown_check_type"}
     
@@ -95,9 +102,14 @@ class NudgeEngine:
         
         days_since_signup = (now - created_at).days
         
-        # Count sessions
+        # Count sessions - convert user_id to UUID for query
+        try:
+            user_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+        except (ValueError, TypeError):
+            return {"should_send": False, "reason": "invalid_user_id"}
+        
         session_count = self.db.query(SessionModel).filter(
-            SessionModel.student_id == user_id
+            SessionModel.student_id == user_uuid
         ).count()
         
         # Check if threshold met
@@ -146,9 +158,15 @@ class NudgeEngine:
     
     def _check_goal_completion_nudge(self, user_id: str, user: User) -> Dict:
         """Check if goal completion nudge should be sent"""
+        # Convert user_id to UUID for query
+        try:
+            user_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+        except (ValueError, TypeError):
+            return {"should_send": False, "reason": "invalid_user_id"}
+        
         # Find recently completed goals
         completed_goals = self.db.query(Goal).filter(
-            Goal.student_id == user_id,
+            Goal.student_id == user_uuid,
             Goal.status == "completed",
             Goal.completed_at >= datetime.now(timezone.utc) - timedelta(days=7)
         ).all()

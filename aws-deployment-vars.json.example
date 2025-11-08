@@ -1,0 +1,24 @@
+{
+    "VPC_ID": "vpc-xxxxxxxxxxxxxxxxx",
+    "DB_INSTANCE_ID": "elevareai-db",
+    "REGION": "us-east-1",
+    "DB_PASSWORD": "YOUR_GENERATED_PASSWORD_HERE",
+    "RDS_SG_ID": "sg-xxxxxxxxxxxxxxxxx",
+    "ACCOUNT_ID": "123456789012",
+    "ECS_SG_ID": "sg-xxxxxxxxxxxxxxxxx",
+    "SUBNETS": "subnet-xxxxxxxxxxxxxxxxx subnet-yyyyyyyyyyyyyyyyy",
+    "PROJECT_NAME": "elevareai",
+    "ECS_TASK_ROLE_ARN": "arn:aws:iam::123456789012:role/elevareai-ecs-task-role",
+    "DB_ENDPOINT": "elevareai-db.xxxxxxxxxxxx.us-east-1.rds.amazonaws.com",
+    "ECR_REPO_URI": "123456789012.dkr.ecr.us-east-1.amazonaws.com/elevareai-api",
+    "ALB_ARN": "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/elevareai-alb/xxxxxxxxxxxxx",
+    "ALB_DNS": "elevareai-alb-xxxxxxxxxxxx.us-east-1.elb.amazonaws.com",
+    "TG_ARN": "arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/elevareai-api-tg/xxxxxxxxxxxxx",
+    "BUCKET_NAME": "elevareai-frontend-xxxx",
+    "S3_WEBSITE_URL": "http://elevareai-frontend-xxxx.s3-website-us-east-1.amazonaws.com",
+    "CF_DIST_ID": "XXXXXXXXXXXXX",
+    "CF_DOMAIN": "xxxxxxxxxxxxx.cloudfront.net",
+    "COGNITO_USER_POOL_ID": "YOUR_COGNITO_USER_POOL_ID",
+    "COGNITO_CLIENT_ID": "YOUR_COGNITO_CLIENT_ID"
+}
+
