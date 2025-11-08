@@ -94,7 +94,15 @@ async def get_progress(
     else:
         # Production: Verify user has access via Cognito
         user_sub = current_user.get("sub")
-        user_email = current_user.get("email", "")
+        # Try multiple ways to get email from Cognito token
+        user_email = (
+            current_user.get("email") or 
+            current_user.get("cognito:username") or 
+            ""
+        )
+        # Only use email if it looks like an email address
+        if user_email and "@" not in user_email:
+            user_email = ""
         
         # Ensure user exists in database (auto-create on first login)
         db_user = ensure_user_exists(db, user_sub, user_email, role="student")

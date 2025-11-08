@@ -38,7 +38,7 @@ def get_db_connection_string(env_vars=None):
     
     db_host = env_vars.get('DB_HOST') or os.getenv('DB_HOST', 'localhost')
     db_port = env_vars.get('DB_PORT') or os.getenv('DB_PORT', '5432')
-    db_name = env_vars.get('DB_NAME') or os.getenv('DB_NAME', 'pennygadget')
+    db_name = env_vars.get('DB_NAME') or os.getenv('DB_NAME', 'elevareai')
     db_user = env_vars.get('DB_USER') or os.getenv('DB_USER', 'postgres')
     db_password = env_vars.get('DB_PASSWORD') or os.getenv('DB_PASSWORD', '')
     
@@ -163,7 +163,7 @@ def main():
     # Get database connection details
     db_host = env_vars.get('DB_HOST') or os.getenv('DB_HOST', 'localhost')
     db_port = env_vars.get('DB_PORT') or os.getenv('DB_PORT', '5432')
-    db_name = env_vars.get('DB_NAME') or os.getenv('DB_NAME', 'pennygadget')
+    db_name = env_vars.get('DB_NAME') or os.getenv('DB_NAME', 'elevareai')
     db_user = env_vars.get('DB_USER') or os.getenv('DB_USER', 'postgres')
     db_password = env_vars.get('DB_PASSWORD') or os.getenv('DB_PASSWORD', '')
     

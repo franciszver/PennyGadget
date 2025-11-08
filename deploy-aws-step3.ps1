@@ -25,6 +25,20 @@ if (-not $COGNITO_USER_POOL_ID -or -not $COGNITO_CLIENT_ID) {
     exit 1
 }
 
+# Get OpenAI API key from environment variable
+$OPENAI_API_KEY = $env:OPENAI_API_KEY
+if (-not $OPENAI_API_KEY) {
+    Write-Host "ERROR: OPENAI_API_KEY not found in environment!" -ForegroundColor Red
+    Write-Host "Please set: `$env:OPENAI_API_KEY = 'sk-...'" -ForegroundColor Red
+    exit 1
+}
+
+# Validate OpenAI key format
+if ($OPENAI_API_KEY -notlike "sk-*") {
+    Write-Host "WARNING: OpenAI API key format may be invalid (should start with 'sk-')" -ForegroundColor Yellow
+}
+Write-Host "Using OpenAI API key (format validated)" -ForegroundColor Green
+
 # Step 11: Create ECS Task Definition
 Write-Host "Step 11: Creating ECS task definition..." -ForegroundColor Cyan
 
@@ -56,6 +70,7 @@ $TASK_DEF_JSON = @{
                 @{ name = "COGNITO_USER_POOL_ID"; value = $COGNITO_USER_POOL_ID }
                 @{ name = "COGNITO_CLIENT_ID"; value = $COGNITO_CLIENT_ID }
                 @{ name = "COGNITO_REGION"; value = $REGION }
+                @{ name = "OPENAI_API_KEY"; value = $OPENAI_API_KEY }
                 @{ name = "ENVIRONMENT"; value = "production" }
                 @{ name = "LOG_LEVEL"; value = "INFO" }
             )

@@ -120,6 +120,7 @@ yarn-error.log*
 # AWS Deployment Files (contain sensitive credentials)
 aws-deployment-vars.json
 task-definition.json
+task-definition-clean.json
 task-def-dev.json
 task-def-update.json
 bucket-policy.json
@@ -127,9 +128,7 @@ trust-policy.json
 s3-website-config.json
 cloudfront-config.json
 cloudfront-update.json
-deploy-frontend.ps1
-scripts/setup-github-actions-aws.ps1
-scripts/create_production_demo_users.py
-src/utils/user_creation.py
-deploy-backend-v1.1.4.ps1
-scripts/diagnose-api-404.ps1
+cf-api-config.json
+
+# Temporary files
+examples/frontend-starter/src/cache-bust.txt

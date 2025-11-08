@@ -1,8 +1,17 @@
 import axios from 'axios';
 
+// API Client Configuration - Updated 2025-11-08
 // Use proxy in development, direct URL in production
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
-  (import.meta.env.DEV ? '/api/v1' : 'http://localhost:8000/api/v1');
+// If VITE_API_BASE_URL is set, append /api/v1 if not already present
+let baseUrl = import.meta.env.VITE_API_BASE_URL;
+if (baseUrl && !baseUrl.includes('/api/v1')) {
+  // Ensure base URL ends with /api/v1
+  baseUrl = baseUrl.replace(/\/$/, '') + '/api/v1';
+}
+
+// IMPORTANT: Always use VITE_API_BASE_URL in production, never fall back to localhost
+const API_BASE_URL = baseUrl || '/api/v1';
+console.log('[API Client] Initialized with base URL:', API_BASE_URL, '- Build: 20251108-v2');
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -105,6 +114,9 @@ export const api = {
   getNudges: (userId) => apiClient.get(`/nudges/users/${userId}`),
   engageNudge: (nudgeId, engagementType) => 
     apiClient.post(`/nudges/${nudgeId}/engage`, { engagement_type: engagementType }),
+  
+  // Auth
+  getCurrentUser: () => apiClient.get('/auth/me'),
 };
 
 export default apiClient;

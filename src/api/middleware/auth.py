@@ -113,6 +113,15 @@ async def get_current_user(
     
     payload = verify_token(token)
     
+    # Ensure email is extracted properly - Cognito tokens may have email in different places
+    if not payload.get("email"):
+        # Try alternative email sources
+        email = payload.get("cognito:username") or payload.get("email_verified") or ""
+        # If cognito:username looks like an email, use it
+        if "@" in str(email):
+            payload["email"] = email
+        # Otherwise, email will be empty and ensure_user_exists will handle it
+    
     return payload
 
 

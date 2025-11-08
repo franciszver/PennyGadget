@@ -229,15 +229,34 @@ export function AuthProvider({ children }) {
           localStorage.setItem('auth_token', result.accessToken);
           localStorage.setItem('id_token', result.idToken);
           localStorage.setItem('refresh_token', result.refreshToken);
-          localStorage.setItem('user_id', result.user.sub);
-          localStorage.setItem('user_role', 'student');
-          localStorage.setItem('user_email', result.user.email);
           
           console.log('[AUTH] Cognito login successful:', { email: result.user.email, sub: result.user.sub });
           
-          // Update state synchronously
-          setIsAuthenticated(true);
-          setUser({ id: result.user.sub, role: 'student', email: result.user.email });
+          // Call /auth/me to create/get database user record
+          try {
+            const { api } = await import('../services/apiClient');
+            const userResponse = await api.getCurrentUser();
+            const dbUser = userResponse.data.data;
+            
+            // Store database user ID (not Cognito sub)
+            localStorage.setItem('user_id', dbUser.id);
+            localStorage.setItem('user_role', dbUser.role);
+            localStorage.setItem('user_email', dbUser.email);
+            
+            console.log('[AUTH] Database user created/retrieved:', { id: dbUser.id, email: dbUser.email });
+            
+            // Update state with database user ID
+            setIsAuthenticated(true);
+            setUser({ id: dbUser.id, role: dbUser.role, email: dbUser.email });
+          } catch (authError) {
+            console.error('[AUTH] Error calling /auth/me:', authError);
+            // Fallback to Cognito sub if /auth/me fails
+            localStorage.setItem('user_id', result.user.sub);
+            localStorage.setItem('user_role', 'student');
+            localStorage.setItem('user_email', result.user.email);
+            setIsAuthenticated(true);
+            setUser({ id: result.user.sub, role: 'student', email: result.user.email });
+          }
           
           return { success: true };
         } catch (cognitoError) {

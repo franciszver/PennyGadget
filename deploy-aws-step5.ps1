@@ -54,8 +54,16 @@ if (-not $COGNITO_USER_POOL_ID -or -not $COGNITO_CLIENT_ID) {
     exit 1
 }
 
-# Set API URL environment variable for build
-$env:VITE_API_BASE_URL = "http://$ALB_DNS"
+# Set API URL environment variable for build - use CloudFront API domain (HTTPS)
+$CF_API_DOMAIN = if ($vars.CF_API_DOMAIN) { $vars.CF_API_DOMAIN } else { $env:CF_API_DOMAIN }
+if (-not $CF_API_DOMAIN) {
+    Write-Host "WARNING: CloudFront API domain not found. Using ALB DNS (HTTP) instead." -ForegroundColor Yellow
+    Write-Host "Run deploy-aws-step5-api-cf.ps1 first to create CloudFront API distribution." -ForegroundColor Yellow
+    $env:VITE_API_BASE_URL = "http://$ALB_DNS"
+} else {
+    Write-Host "Using CloudFront API domain (HTTPS): $CF_API_DOMAIN" -ForegroundColor Green
+    $env:VITE_API_BASE_URL = "https://$CF_API_DOMAIN"
+}
 $env:VITE_COGNITO_USER_POOL_ID = $COGNITO_USER_POOL_ID
 $env:VITE_COGNITO_CLIENT_ID = $COGNITO_CLIENT_ID
 $env:VITE_COGNITO_REGION = $REGION
@@ -85,8 +93,14 @@ $CF_DIST_CONFIG = @{
     DefaultCacheBehavior = @{
         TargetOriginId = $CF_ORIGIN_ID
         ViewerProtocolPolicy = "redirect-to-https"
-        AllowedMethods = @("GET", "HEAD", "OPTIONS")
-        CachedMethods = @("GET", "HEAD")
+        AllowedMethods = @{
+            Quantity = 3
+            Items = @("GET", "HEAD", "OPTIONS")
+            CachedMethods = @{
+                Quantity = 2
+                Items = @("GET", "HEAD")
+            }
+        }
         ForwardedValues = @{
             QueryString = $false
             Cookies = @{
@@ -97,22 +111,27 @@ $CF_DIST_CONFIG = @{
         DefaultTTL = 86400
         MaxTTL = 31536000
     }
-    Origins = @(
-        @{
-            Id = $CF_ORIGIN_ID
-            DomainName = "$BUCKET_NAME.s3-website-$REGION.amazonaws.com"
-            CustomOriginConfig = @{
-                HTTPPort = 80
-                HTTPSPort = 443
-                OriginProtocolPolicy = "http-only"
+    Origins = @{
+        Quantity = 1
+        Items = @(
+            @{
+                Id = $CF_ORIGIN_ID
+                DomainName = "$BUCKET_NAME.s3-website-$REGION.amazonaws.com"
+                CustomOriginConfig = @{
+                    HTTPPort = 80
+                    HTTPSPort = 443
+                    OriginProtocolPolicy = "http-only"
+                }
             }
-        }
-    )
+        )
+    }
     Enabled = $true
     PriceClass = "PriceClass_100"
 } | ConvertTo-Json -Depth 10
 
-$CF_DIST_CONFIG | Out-File -FilePath "cloudfront-config.json" -Encoding UTF8
+# Write JSON without BOM
+$utf8NoBom = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllText("$PWD\cloudfront-config.json", $CF_DIST_CONFIG, $utf8NoBom)
 
 $CF_DIST = aws cloudfront create-distribution --distribution-config file://cloudfront-config.json --query 'Distribution.{Id:Id,DomainName:DomainName,Status:Status}' --output json | ConvertFrom-Json
 

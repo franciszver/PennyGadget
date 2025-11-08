@@ -33,7 +33,15 @@ async def get_current_user_info(
     
     # Production: Get or create user in database
     user_sub = current_user.get("sub")
-    user_email = current_user.get("email", "")
+    # Try multiple ways to get email from Cognito token
+    user_email = (
+        current_user.get("email") or 
+        current_user.get("cognito:username") or 
+        ""
+    )
+    # Only use email if it looks like an email address
+    if user_email and "@" not in user_email:
+        user_email = ""
     
     # Ensure user exists (creates if doesn't exist)
     db_user = ensure_user_exists(db, user_sub, user_email, role="student")

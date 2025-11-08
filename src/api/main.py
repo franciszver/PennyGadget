@@ -53,7 +53,8 @@ app = FastAPI(
     title="AI Study Companion API",
     description="Persistent AI agent supporting students between tutoring sessions",
     version="1.1.4",
-    lifespan=lifespan
+    lifespan=lifespan,
+    redirect_slashes=False  # Disable automatic trailing slash redirects to prevent HTTP redirects behind proxy
 )
 
 # CORS middleware

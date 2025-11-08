@@ -57,8 +57,8 @@ function Messaging() {
     );
   }
 
-  const threadsList = threads?.data || [];
-  const currentThread = threadsList.find(t => t.id === selectedThread?.id) || selectedThread;
+  const threadsList = Array.isArray(threads?.data?.threads) ? threads.data.threads : (Array.isArray(threads?.data) ? threads.data : []);
+  const currentThread = threadsList.find(t => t.thread_id === selectedThread?.thread_id || t.id === selectedThread?.id) || selectedThread;
 
   return (
     <div className="messaging">

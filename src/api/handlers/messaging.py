@@ -211,6 +211,7 @@ async def send_message(
 
 @router.get("/threads")
 async def list_threads(
+    user_id: Optional[str] = Query(None, description="User ID (optional, defaults to current user)"),
     role: Optional[str] = Query(None, description="Filter by role (tutor or student)"),
     status: Optional[str] = Query(None, description="Filter by status (open, closed, archived)"),
     db: DBSession = Depends(get_db),
@@ -221,9 +222,20 @@ async def list_threads(
     
     Tutors see threads they created
     Students see threads they're part of
+    
+    If user_id is provided, use that user (for frontend compatibility)
+    Otherwise, use the authenticated user from JWT token
     """
-    user_sub = current_user.get("sub")
-    db_user = db.query(User).filter(User.cognito_sub == user_sub).first()
+    # Support user_id query parameter for frontend compatibility
+    if user_id:
+        try:
+            db_user = db.query(User).filter(User.id == UUID(user_id)).first()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid user_id format")
+    else:
+        # Use authenticated user from JWT token
+        user_sub = current_user.get("sub")
+        db_user = db.query(User).filter(User.cognito_sub == user_sub).first()
     
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")

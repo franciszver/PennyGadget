@@ -47,20 +47,22 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Migrations completed successfully!" -ForegroundColor Green
 
 # Step 19: Create Demo Users
-Write-Host "`nStep 19: Creating demo users..." -ForegroundColor Cyan
-
-# Set environment variables for demo user script
-$env:DB_HOST = $DB_ENDPOINT
-$env:DB_PORT = "5432"
-$env:DB_NAME = "elevareai"
-$env:DB_USER = "elevareai_admin"
-$env:DB_PASSWORD = $DB_PASSWORD
-
-Write-Host "Running demo user creation script..." -ForegroundColor Yellow
-python scripts/create_demo_users.py
-
-Write-Host "Verifying demo users..." -ForegroundColor Yellow
-python scripts/verify_all_demo_accounts.py
+# SKIPPED - Demo users not needed for production deployment
+# Write-Host "`nStep 19: Creating demo users..." -ForegroundColor Cyan
+# 
+# # Set environment variables for demo user script
+# $env:DB_HOST = $DB_ENDPOINT
+# $env:DB_PORT = "5432"
+# $env:DB_NAME = "elevareai"
+# $env:DB_USER = "elevareai_admin"
+# $env:DB_PASSWORD = $DB_PASSWORD
+# 
+# Write-Host "Running demo user creation script..." -ForegroundColor Yellow
+# python scripts/create_demo_users.py
+# 
+# Write-Host "Verifying demo users..." -ForegroundColor Yellow
+# python scripts/verify_all_demo_accounts.py
+Write-Host "`nStep 19: Skipping demo user creation (not needed for production)" -ForegroundColor Yellow
 
 Write-Host "`nNext: Run deploy-aws-step5.ps1 to deploy frontend" -ForegroundColor Cyan
 

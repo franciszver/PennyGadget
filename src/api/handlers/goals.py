@@ -38,7 +38,8 @@ class CreateGoalRequest(BaseModel):
     target_completion_date: Optional[str] = None
 
 
-@router.get("/")
+@router.get("/", include_in_schema=False)
+@router.get("")
 async def get_goals(
     student_id: str = Query(..., description="Student ID"),
     db: DBSession = Depends(get_db),
@@ -166,7 +167,8 @@ async def get_goals(
     }
 
 
-@router.post("/")
+@router.post("/", include_in_schema=False)
+@router.post("")
 async def create_goal(
     request: CreateGoalRequest,
     db: DBSession = Depends(get_db),

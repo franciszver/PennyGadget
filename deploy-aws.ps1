@@ -86,6 +86,54 @@ Write-Host "Save this password now!" -ForegroundColor Red
     DB_INSTANCE_ID = $DB_INSTANCE_ID
 } | ConvertTo-Json | Out-File -FilePath "aws-deployment-vars.json" -Encoding UTF8
 
+# Step 6: Create Cognito User Pool and Client
+Write-Host "`nStep 6: Creating Cognito User Pool..." -ForegroundColor Cyan
+$COGNITO_POOL_NAME = "$PROJECT_NAME-users"
+$COGNITO_CLIENT_NAME = "$PROJECT_NAME-client"
+
+# Check if user pool already exists
+$EXISTING_POOL = aws cognito-idp list-user-pools --max-results 10 --region $REGION --query "UserPools[?Name=='$COGNITO_POOL_NAME'].Id" --output text
+if ($EXISTING_POOL) {
+    Write-Host "Cognito User Pool already exists. Using existing pool: $EXISTING_POOL" -ForegroundColor Yellow
+    $COGNITO_USER_POOL_ID = $EXISTING_POOL
+} else {
+    # Create User Pool
+    $COGNITO_USER_POOL_ID = aws cognito-idp create-user-pool `
+        --pool-name $COGNITO_POOL_NAME `
+        --policies "PasswordPolicy={MinimumLength=8,RequireUppercase=true,RequireLowercase=true,RequireNumbers=true,RequireSymbols=true}" `
+        --auto-verified-attributes email `
+        --region $REGION `
+        --query 'UserPool.Id' `
+        --output text
+    Write-Host "Created Cognito User Pool ID: $COGNITO_USER_POOL_ID" -ForegroundColor Green
+}
+
+# Check if client already exists
+$EXISTING_CLIENT = aws cognito-idp list-user-pool-clients --user-pool-id $COGNITO_USER_POOL_ID --region $REGION --query "UserPoolClients[?ClientName=='$COGNITO_CLIENT_NAME'].ClientId" --output text
+if ($EXISTING_CLIENT) {
+    Write-Host "Cognito Client already exists. Using existing client: $EXISTING_CLIENT" -ForegroundColor Yellow
+    $COGNITO_CLIENT_ID = $EXISTING_CLIENT
+} else {
+    # Create User Pool Client (PUBLIC - no secret for frontend JavaScript)
+    $COGNITO_CLIENT_ID = aws cognito-idp create-user-pool-client `
+        --user-pool-id $COGNITO_USER_POOL_ID `
+        --client-name $COGNITO_CLIENT_NAME `
+        --explicit-auth-flows ALLOW_USER_SRP_AUTH ALLOW_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH `
+        --region $REGION `
+        --query 'UserPoolClient.ClientId' `
+        --output text
+    Write-Host "Created Cognito Client ID: $COGNITO_CLIENT_ID" -ForegroundColor Green
+}
+
+# Update variables file with Cognito IDs
+$vars = Get-Content aws-deployment-vars.json | ConvertFrom-Json
+$vars | Add-Member -NotePropertyName "COGNITO_USER_POOL_ID" -NotePropertyValue $COGNITO_USER_POOL_ID -Force
+$vars | Add-Member -NotePropertyName "COGNITO_CLIENT_ID" -NotePropertyValue $COGNITO_CLIENT_ID -Force
+$vars | ConvertTo-Json | Out-File -FilePath "aws-deployment-vars.json" -Encoding UTF8
+
+Write-Host "Cognito User Pool ID: $COGNITO_USER_POOL_ID" -ForegroundColor Green
+Write-Host "Cognito Client ID: $COGNITO_CLIENT_ID" -ForegroundColor Green
+
 Write-Host "`nVariables saved to aws-deployment-vars.json" -ForegroundColor Green
 Write-Host "`nNext: Wait 5-10 minutes for RDS to be available, then run deploy-aws-step2.ps1" -ForegroundColor Cyan
 
