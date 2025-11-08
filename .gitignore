@@ -127,3 +127,4 @@ trust-policy.json
 s3-website-config.json
 cloudfront-config.json
 cloudfront-update.json
+deploy-frontend.ps1

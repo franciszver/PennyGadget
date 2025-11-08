@@ -215,3 +215,85 @@ export async function confirmSignUp(email, code) {
   });
 }
 
+/**
+ * Request password reset code
+ * @param {string} email - User email
+ * @returns {Promise<void>}
+ */
+export async function forgotPassword(email) {
+  if (!userPool) {
+    throw new Error('Cognito is not configured');
+  }
+
+  return new Promise((resolve, reject) => {
+    const cognitoUser = new CognitoUser({
+      Username: email,
+      Pool: userPool,
+    });
+
+    cognitoUser.forgotPassword({
+      onSuccess: (data) => {
+        resolve(data);
+      },
+      onFailure: (err) => {
+        reject(err);
+      },
+    });
+  });
+}
+
+/**
+ * Confirm password reset with code and new password
+ * @param {string} email - User email
+ * @param {string} code - Verification code
+ * @param {string} newPassword - New password
+ * @returns {Promise<void>}
+ */
+export async function confirmPassword(email, code, newPassword) {
+  if (!userPool) {
+    throw new Error('Cognito is not configured');
+  }
+
+  return new Promise((resolve, reject) => {
+    const cognitoUser = new CognitoUser({
+      Username: email,
+      Pool: userPool,
+    });
+
+    cognitoUser.confirmPassword(code, newPassword, {
+      onSuccess: () => {
+        resolve();
+      },
+      onFailure: (err) => {
+        reject(err);
+      },
+    });
+  });
+}
+
+/**
+ * Resend confirmation code for signup
+ * @param {string} email - User email
+ * @returns {Promise<void>}
+ */
+export async function resendConfirmationCode(email) {
+  if (!userPool) {
+    throw new Error('Cognito is not configured');
+  }
+
+  return new Promise((resolve, reject) => {
+    const cognitoUser = new CognitoUser({
+      Username: email,
+      Pool: userPool,
+    });
+
+    cognitoUser.resendConfirmationCode((err, result) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(result);
+    });
+  });
+}
+

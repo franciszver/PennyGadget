@@ -146,13 +146,26 @@ EXISTING_CLIENT=$(aws cognito-idp list-user-pool-clients \
 if [ -n "$EXISTING_CLIENT" ]; then
   echo "  ⚠️  User pool client already exists: $EXISTING_CLIENT"
   CLIENT_ID="$EXISTING_CLIENT"
+  
+  # Update existing client to include USER_SRP_AUTH
+  echo "  Updating client to enable USER_SRP_AUTH..."
+  if aws cognito-idp update-user-pool-client \
+    --user-pool-id "$USER_POOL_ID" \
+    --client-id "$CLIENT_ID" \
+    --explicit-auth-flows ALLOW_USER_SRP_AUTH ALLOW_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH \
+    --region "$REGION" \
+    --output json > /dev/null 2>&1; then
+    echo "  ✅ Client updated successfully"
+  else
+    echo "  ⚠️  Failed to update client. You may need to manually update it to enable USER_SRP_AUTH"
+  fi
 else
   echo "  Creating User Pool Client..."
   CLIENT_ID=$(aws cognito-idp create-user-pool-client \
     --user-pool-id "$USER_POOL_ID" \
     --client-name "$CLIENT_NAME" \
     --generate-secret \
-    --explicit-auth-flows ALLOW_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH \
+    --explicit-auth-flows ALLOW_USER_SRP_AUTH ALLOW_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH \
     --region "$REGION" \
     --query 'UserPoolClient.ClientId' \
     --output text)

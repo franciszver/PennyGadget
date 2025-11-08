@@ -14,6 +14,7 @@ from src.models.goal import Goal
 from src.models.user import User
 from src.models.practice import StudentRating
 from src.config.settings import settings
+from src.utils.user_creation import ensure_user_exists
 import logging
 
 logger = logging.getLogger(__name__)
@@ -93,13 +94,19 @@ async def get_progress(
     else:
         # Production: Verify user has access via Cognito
         user_sub = current_user.get("sub")
-        db_user = db.query(User).filter(User.cognito_sub == user_sub).first()
+        user_email = current_user.get("email", "")
         
-        if not db_user:
-            raise HTTPException(status_code=404, detail="User not found")
+        # Ensure user exists in database (auto-create on first login)
+        db_user = ensure_user_exists(db, user_sub, user_email, role="student")
         
-        # Verify the user_id matches the authenticated user
-        if db_user.id != user_id:
+        # The user_id in the URL might be the Cognito sub or the database UUID
+        # If it's the Cognito sub, use the database user's ID instead
+        # If it's already the database UUID, verify it matches
+        if str(user_id) == user_sub:
+            # Frontend sent Cognito sub instead of database UUID - use database user ID
+            user_id = db_user.id
+        elif db_user.id != user_id:
+            # Frontend sent a different UUID - verify it matches the authenticated user
             raise HTTPException(status_code=403, detail="Access denied")
     
     # Get user's goals (active and recently completed)

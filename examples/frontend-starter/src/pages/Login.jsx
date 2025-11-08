@@ -107,6 +107,18 @@ function Login() {
                     <span className="error-message">{errors.password}</span>
                   )}
                 </div>
+                <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
+                  <Link 
+                    to="/forgot-password" 
+                    style={{ 
+                      color: 'var(--primary)', 
+                      textDecoration: 'none',
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    Forgot Password?
+                  </Link>
+                </div>
                 <button type="submit">Login</button>
               </form>
         <p style={{ marginTop: '1rem', textAlign: 'center', color: 'var(--text-secondary)' }}>

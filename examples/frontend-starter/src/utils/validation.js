@@ -82,12 +82,44 @@ export const validators = {
     }
     return null;
   },
+
+  // Password policy validators (matching AWS Cognito requirements)
+  passwordPolicy: (value) => {
+    if (!value) return null;
+    
+    const errors = [];
+    
+    if (value.length < 8) {
+      errors.push('at least 8 characters');
+    }
+    if (!/[A-Z]/.test(value)) {
+      errors.push('one uppercase letter');
+    }
+    if (!/[a-z]/.test(value)) {
+      errors.push('one lowercase letter');
+    }
+    if (!/[0-9]/.test(value)) {
+      errors.push('one number');
+    }
+    if (!/[^A-Za-z0-9]/.test(value)) {
+      errors.push('one symbol');
+    }
+    
+    if (errors.length > 0) {
+      return `Password must contain ${errors.join(', ')}`;
+    }
+    
+    return null;
+  },
 };
 
 /**
  * Validate a field with multiple validators
+ * @param {*} value - The field value to validate
+ * @param {Array} rules - Array of validation rules
+ * @param {Object} allValues - All form values (for cross-field validation)
  */
-export function validateField(value, rules) {
+export function validateField(value, rules, allValues = {}) {
   if (!rules || rules.length === 0) return null;
 
   for (const rule of rules) {
@@ -104,7 +136,8 @@ export function validateField(value, rules) {
     }
 
     if (validator) {
-      const result = validator(value);
+      // Pass allValues if validator accepts 2 parameters (for cross-field validation)
+      const result = validator.length === 2 ? validator(value, allValues) : validator(value);
       if (result) {
         return error || result;
       }
@@ -122,7 +155,7 @@ export function validateForm(formData, schema) {
 
   for (const [field, rules] of Object.entries(schema)) {
     const value = formData[field];
-    const error = validateField(value, rules);
+    const error = validateField(value, rules, formData);
     if (error) {
       errors[field] = error;
     }

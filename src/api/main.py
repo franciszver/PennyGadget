@@ -115,8 +115,9 @@ async def get_metrics():
 
 
 # Import routers
-from src.api.handlers import summaries, practice, qa, progress, nudges, overrides, messaging, dashboards, advanced_analytics, integrations, enhancements, goals
+from src.api.handlers import auth, summaries, practice, qa, progress, nudges, overrides, messaging, dashboards, advanced_analytics, integrations, enhancements, goals
 
+app.include_router(auth.router, prefix="/api/v1")
 app.include_router(summaries.router, prefix="/api/v1")
 app.include_router(practice.router, prefix="/api/v1")
 app.include_router(qa.router, prefix="/api/v1")

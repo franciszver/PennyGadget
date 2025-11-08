@@ -271,6 +271,29 @@ $ExistingClient = $ExistingClients.UserPoolClients | Where-Object { $_.ClientNam
 if ($ExistingClient) {
     Write-Host "  [WARNING] User pool client already exists: $($ExistingClient.ClientId)" -ForegroundColor Yellow
     $ClientId = $ExistingClient.ClientId
+    
+    # Update existing client to include USER_SRP_AUTH
+    Write-Host "  Updating client to enable USER_SRP_AUTH..." -ForegroundColor Green
+    $ProfileArg = if ($Profile) { "--profile $Profile" } else { "" }
+    
+    $UpdateClientCommand = "aws cognito-idp update-user-pool-client " +
+        "--user-pool-id '$UserPoolId' " +
+        "--client-id '$ClientId' " +
+        "--explicit-auth-flows ALLOW_USER_SRP_AUTH ALLOW_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH " +
+        "--region $Region " +
+        "--output json"
+    
+    if ($ProfileArg) {
+        $UpdateClientCommand += " $ProfileArg"
+    }
+    
+    try {
+        Invoke-Expression $UpdateClientCommand | Out-Null
+        Write-Host "  [OK] Client updated successfully" -ForegroundColor Green
+    } catch {
+        Write-Host "  [WARNING] Failed to update client: $_" -ForegroundColor Yellow
+        Write-Host "  You may need to manually update the client to enable USER_SRP_AUTH" -ForegroundColor Yellow
+    }
 } else {
     Write-Host "  Creating User Pool Client..." -ForegroundColor Green
     
@@ -280,7 +303,7 @@ if ($ExistingClient) {
         "--user-pool-id '$UserPoolId' " +
         "--client-name '$ClientName' " +
         "--generate-secret " +
-        "--explicit-auth-flows ALLOW_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH " +
+        "--explicit-auth-flows ALLOW_USER_SRP_AUTH ALLOW_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH " +
         "--region $Region " +
         "--query 'UserPoolClient.ClientId' " +
         "--output text"
