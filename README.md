@@ -1,11 +1,41 @@
-# 🎓 AI Study Companion
+# 🎓 ElevareAI
 
-**A comprehensive AI-powered tutoring platform that supports students between sessions with adaptive practice, conversational Q&A, personalized nudges, and progress tracking.**
+**ElevareAI** is a comprehensive AI-powered tutoring platform that supports students between sessions with adaptive practice, conversational Q&A, personalized nudges, and progress tracking.
 
 [![Status](https://img.shields.io/badge/status-production%20ready-green)]()
 [![Tests](https://img.shields.io/badge/tests-127%20passing-brightgreen)]()
 [![API](https://img.shields.io/badge/API-64%20endpoints-blue)]()
 [![Version](https://img.shields.io/badge/version-1.0.0-orange)]()
+
+---
+
+## ✨ What You Can Do with ElevareAI
+
+### For Students
+- 📚 **Get AI-Generated Practice Problems** - Receive adaptive practice questions that adjust to your skill level using an Elo rating system
+- 💬 **Ask Questions Anytime** - Get instant answers to your study questions with confidence labels (High/Medium/Low) and tutor escalation when needed
+- 📊 **Track Your Progress** - Monitor multiple learning goals with visual progress dashboards, completion percentages, and streaks
+- 🎯 **Set and Manage Goals** - Create learning goals, track completion, and reset goals to improve your Elo ratings
+- 📝 **Review Session Summaries** - Get narrative recaps of your tutoring sessions with actionable next steps
+- 💌 **Receive Personalized Nudges** - Get smart reminders for inactivity, goal completion, and cross-subject suggestions
+- 💬 **Message Your Tutor** - Communicate directly with your tutor through threaded messaging
+
+### For Tutors
+- 🎛️ **Override AI Recommendations** - Instantly update student progress, goals, and practice difficulty with tutor overrides
+- 📈 **View Student Analytics** - Access detailed dashboards showing student progress, engagement, and performance metrics
+- 💬 **Communicate with Students** - Message students directly and respond to flagged items
+- 📊 **Monitor Confidence Levels** - Track AI confidence scores and identify when students need additional support
+
+### For Parents
+- 👀 **View Student Progress** - Access parent dashboards to see your child's learning progress, goals, and achievements
+- 📧 **Receive Progress Updates** - Get weekly progress emails and notifications about your child's learning journey
+- 📊 **Export Progress Data** - Download detailed reports of your child's academic progress
+
+### For Administrators
+- 📊 **Analytics Dashboards** - Comprehensive overview of all students, override patterns, confidence telemetry, and retention metrics
+- 🧪 **A/B Testing Framework** - Test different nudge strategies and features to optimize student engagement
+- 📤 **Data Export** - Export analytics data for further analysis
+- 🔗 **Integration Management** - Connect with LMS systems (Canvas, Blackboard), calendars (Google, Outlook), and webhooks
 
 ---
 
