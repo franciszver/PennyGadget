@@ -1,0 +1,38 @@
+{
+  "Origins": {
+    "Quantity": 1,
+    "Items": [
+      {
+        "CustomOriginConfig": {
+          "HTTPSPort": 443,
+          "HTTPPort": 80,
+          "OriginProtocolPolicy": "http-only"
+        },
+        "Id": "your-frontend-origin",
+        "DomainName": "your-bucket-name.s3-website-us-east-1.amazonaws.com"
+      }
+    ]
+  },
+  "CallerReference": "YYYYMMDDHHMMSS",
+  "PriceClass": "PriceClass_100",
+  "DefaultCacheBehavior": {
+    "TargetOriginId": "your-frontend-origin",
+    "AllowedMethods": {
+      "Quantity": 3,
+      "Items": ["GET", "HEAD", "OPTIONS"]
+    },
+    "MinTTL": 0,
+    "ViewerProtocolPolicy": "redirect-to-https",
+    "MaxTTL": 31536000,
+    "DefaultTTL": 86400,
+    "ForwardedValues": {
+      "Cookies": {
+        "Forward": "none"
+      },
+      "QueryString": false
+    }
+  },
+  "Enabled": true,
+  "Comment": "Your Frontend Distribution"
+}
+
