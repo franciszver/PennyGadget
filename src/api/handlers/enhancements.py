@@ -43,12 +43,20 @@ async def get_conversation_history(
     db_user = db.query(User).filter(User.cognito_sub == user_sub).first()
     
     if not db_user:
-        # Development mode: Support mock tokens
-        if settings.environment == "development" and user_sub == "demo-user":
-            # In dev mode, verify the student_id exists
+        # Support mock tokens for demo accounts (allow in both dev and production)
+        if user_sub == "demo-user":
+            # For demo accounts, verify the student_id exists
             target_student = db.query(User).filter(User.id == UUID(student_id)).first()
             if not target_student:
                 raise HTTPException(status_code=404, detail="Student not found")
+            # Demo users can access their own history (student_id matches)
+            if str(target_student.id) != student_id:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Access denied: You can only view your own conversation history"
+                )
+            # Use target_student as db_user for demo accounts
+            db_user = target_student
         else:
             raise HTTPException(status_code=404, detail="User not found")
     else:

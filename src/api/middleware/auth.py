@@ -98,23 +98,16 @@ async def get_current_user(
     """
     token = credentials.credentials
     
-    # Support mock tokens for demo accounts ONLY in development mode
-    if settings.environment == "development" and token.startswith("mock-token-"):
+    # Support mock tokens for demo accounts (allow in both dev and production for demo purposes)
+    if token.startswith("mock-token-"):
         # Return a mock payload that will work with demo accounts
-        # The progress endpoint will handle looking up by user_id from the URL
+        # The endpoints will handle looking up by user_id from the URL/request
         return {
             "sub": "demo-user",
             "email": "demo@demo.com",
             "role": "student",
             "cognito:groups": ["students"]
         }
-    
-    # Production: Verify real Cognito token (reject mock tokens)
-    if token.startswith("mock-token-"):
-        raise HTTPException(
-            status_code=401,
-            detail="Mock tokens are not allowed in production mode"
-        )
     
     payload = verify_token(token)
     
@@ -134,18 +127,14 @@ async def get_current_user_optional(
     try:
         token = credentials.credentials
         
-        # Support mock tokens for demo accounts ONLY in development mode
-        if settings.environment == "development" and token.startswith("mock-token-"):
+        # Support mock tokens for demo accounts (allow in both dev and production for demo purposes)
+        if token.startswith("mock-token-"):
             return {
                 "sub": "demo-user",
                 "email": "demo@demo.com",
                 "role": "student",
                 "cognito:groups": ["students"]
             }
-        
-        # Production: Reject mock tokens
-        if token.startswith("mock-token-"):
-            return None
         
         payload = verify_token(token)
         return payload
