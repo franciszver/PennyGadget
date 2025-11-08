@@ -129,3 +129,7 @@ cloudfront-config.json
 cloudfront-update.json
 deploy-frontend.ps1
 scripts/setup-github-actions-aws.ps1
+scripts/create_production_demo_users.py
+src/utils/user_creation.py
+deploy-backend-v1.1.4.ps1
+scripts/diagnose-api-404.ps1

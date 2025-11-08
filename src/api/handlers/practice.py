@@ -121,22 +121,60 @@ async def assign_practice(
     # Select difficulty range
     difficulty_min, difficulty_max = adaptive_service.select_difficulty_range(student_rating)
     
+    # Get all previously assigned questions for this student to avoid repeats
+    # Only fetch the fields we need for efficiency
+    previous_assignments = db.query(
+        PracticeAssignment.bank_item_id,
+        PracticeAssignment.ai_question_text
+    ).filter(
+        PracticeAssignment.student_id == student_id
+    ).all()
+    
+    # Build sets of excluded items
+    excluded_bank_item_ids = set()
+    excluded_question_texts = set()
+    bank_item_ids_to_fetch = set()
+    
+    for prev_assignment in previous_assignments:
+        # Exclude bank items that were already assigned
+        if prev_assignment.bank_item_id:
+            excluded_bank_item_ids.add(prev_assignment.bank_item_id)
+            bank_item_ids_to_fetch.add(prev_assignment.bank_item_id)
+        
+        # Exclude AI-generated question texts
+        if prev_assignment.ai_question_text:
+            excluded_question_texts.add(prev_assignment.ai_question_text.strip().lower())
+    
+    # Fetch question texts for bank items in a single query
+    if bank_item_ids_to_fetch:
+        bank_items_with_texts = db.query(PracticeBankItem.question_text).filter(
+            PracticeBankItem.id.in_(bank_item_ids_to_fetch),
+            PracticeBankItem.question_text.isnot(None)
+        ).all()
+        for bank_item in bank_items_with_texts:
+            if bank_item.question_text:
+                excluded_question_texts.add(bank_item.question_text.strip().lower())
+    
     # Try to find bank items first - request more than needed to account for duplicates
     bank_items = adaptive_service.find_bank_items(
         subject_id=str(subject_obj.id),
         difficulty_min=difficulty_min,
         difficulty_max=difficulty_max,
         goal_tags=goal_tags,
-        limit=num_items * 2  # Request more to have options if duplicates are found
+        limit=num_items * 3  # Request more to account for excluded items
     )
     
     items = []
     assignment_id = uuid.uuid4()
     all_ai_generated = len(bank_items) == 0
     
-    # Track used questions to prevent duplicates
+    # Track used questions to prevent duplicates within this assignment
     used_bank_item_ids = set()
     used_question_texts = set()
+    
+    # Add previously excluded items to the used sets
+    used_bank_item_ids.update(excluded_bank_item_ids)
+    used_question_texts.update(excluded_question_texts)
     
     # If no bank items found, try expanding difficulty range
     if len(bank_items) == 0:
@@ -152,15 +190,22 @@ async def assign_practice(
             difficulty_min=expanded_min,
             difficulty_max=expanded_max,
             goal_tags=None,  # Remove goal tag filter for broader search
-            limit=num_items * 2  # Request more to have options if duplicates are found
+            limit=num_items * 3  # Request more to account for excluded items
         )
     
-    # Use bank items if available, skipping duplicates
+    # Use bank items if available, skipping duplicates and previously assigned questions
     for bank_item in bank_items:
-        # Skip if we've already used this bank item or this question text
+        # Skip if we've already used this bank item in this assignment
         if bank_item.id in used_bank_item_ids:
             continue
+        # Skip if this question text was already used in this assignment
         if bank_item.question_text and bank_item.question_text.strip().lower() in used_question_texts:
+            continue
+        # Skip if this bank item was previously assigned to this student
+        if bank_item.id in excluded_bank_item_ids:
+            continue
+        # Skip if this question text was previously assigned to this student
+        if bank_item.question_text and bank_item.question_text.strip().lower() in excluded_question_texts:
             continue
         
         # Check if we have enough items already
@@ -226,11 +271,14 @@ async def assign_practice(
                 goal_tags=goal_tags
             )
             
-            # Check if this question text is already used
+            # Check if this question text is already used in this assignment or previously assigned
             question_text = ai_item_data.get("question_text", "").strip().lower()
             if question_text in used_question_texts:
                 logger.debug(f"Skipping duplicate AI-generated question: {question_text[:50]}...")
                 continue  # Skip this duplicate and try again
+            if question_text in excluded_question_texts:
+                logger.debug(f"Skipping previously assigned AI-generated question: {question_text[:50]}...")
+                continue  # Skip this previously assigned question and try again
             
             assignment = PracticeAssignment(
                 id=uuid.uuid4(),
