@@ -104,5 +104,5 @@ Write-Host "✅ No mixed content issues (both HTTP)" -ForegroundColor Green
 Write-Host "✅ No certificates needed" -ForegroundColor Green
 Write-Host "✅ Works immediately" -ForegroundColor Green
 Write-Host ""
-Write-Host "Note: For production with HTTPS, use deploy-frontend.ps1 instead" -ForegroundColor Gray
+Write-Host "Note: For production with HTTPS, use scripts\deployment\deploy-frontend.ps1 instead" -ForegroundColor Gray
 

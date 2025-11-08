@@ -58,7 +58,7 @@ if (-not $COGNITO_USER_POOL_ID -or -not $COGNITO_CLIENT_ID) {
 $CF_API_DOMAIN = if ($vars.CF_API_DOMAIN) { $vars.CF_API_DOMAIN } else { $env:CF_API_DOMAIN }
 if (-not $CF_API_DOMAIN) {
     Write-Host "WARNING: CloudFront API domain not found. Using ALB DNS (HTTP) instead." -ForegroundColor Yellow
-    Write-Host "Run deploy-aws-step5-api-cf.ps1 first to create CloudFront API distribution." -ForegroundColor Yellow
+    Write-Host "Run scripts\deployment\deploy-aws-step5-api-cf.ps1 first to create CloudFront API distribution." -ForegroundColor Yellow
     $env:VITE_API_BASE_URL = "http://$ALB_DNS"
 } else {
     Write-Host "Using CloudFront API domain (HTTPS): $CF_API_DOMAIN" -ForegroundColor Green

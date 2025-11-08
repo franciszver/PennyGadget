@@ -103,5 +103,5 @@ $vars | Add-Member -NotePropertyName ECR_REPO_URI -NotePropertyValue $ECR_REPO_U
 $vars | Add-Member -NotePropertyName ECS_TASK_ROLE_ARN -NotePropertyValue $ECS_TASK_ROLE_ARN -Force
 $vars | ConvertTo-Json | Out-File -FilePath "aws-deployment-vars.json" -Encoding UTF8
 
-Write-Host "`nNext: Run deploy-aws-step3.ps1 to create task definition and deploy service" -ForegroundColor Cyan
+Write-Host "`nNext: Run .\scripts\deployment\deploy-aws-step3.ps1 to create task definition and deploy service" -ForegroundColor Cyan
 

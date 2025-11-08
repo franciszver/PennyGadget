@@ -39,7 +39,7 @@ The frontend is served over HTTPS via CloudFront, but the API is HTTP-only on th
 
 4. **Update Frontend Deployment:**
    ```powershell
-   .\deploy-frontend.ps1
+   .\scripts\deployment\deploy-frontend.ps1
    ```
    The script will automatically detect HTTPS and use it.
 
@@ -91,5 +91,5 @@ aws acm list-certificates --region us-east-1 --query 'CertificateSummaryList[*].
 
 1. **For Production**: Set up a custom domain and ACM certificate
 2. **For Testing**: Use S3 HTTP URL temporarily
-3. **Deploy Frontend**: Run `.\deploy-frontend.ps1` after adding HTTPS
+3. **Deploy Frontend**: Run `.\scripts\deployment\deploy-frontend.ps1` after adding HTTPS
 

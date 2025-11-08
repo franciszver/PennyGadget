@@ -151,5 +151,5 @@ $vars | Add-Member -NotePropertyName ALB_DNS -NotePropertyValue $ALB_DNS -Force
 $vars | Add-Member -NotePropertyName TG_ARN -NotePropertyValue $TG_ARN -Force
 $vars | ConvertTo-Json | Out-File -FilePath "aws-deployment-vars.json" -Encoding UTF8
 
-Write-Host "`nNext: Wait 2-3 minutes, then run deploy-aws-step4.ps1 to test and continue" -ForegroundColor Cyan
+Write-Host "`nNext: Wait 2-3 minutes, then run .\scripts\deployment\deploy-aws-step4.ps1 to test and continue" -ForegroundColor Cyan
 

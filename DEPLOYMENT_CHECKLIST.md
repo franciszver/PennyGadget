@@ -14,7 +14,7 @@
 
 ### Step 1: Initial Setup
 ```powershell
-.\deploy-aws.ps1
+.\scripts\deployment\deploy-aws.ps1
 ```
 - [ ] Script completes successfully
 - [ ] `aws-deployment-vars.json` created
@@ -22,7 +22,7 @@
 
 ### Step 2: Infrastructure Setup
 ```powershell
-.\deploy-aws-step2.ps1
+.\scripts\deployment\deploy-aws-step2.ps1
 ```
 - [ ] ECR repository created
 - [ ] Docker image built and pushed
@@ -31,7 +31,7 @@
 
 ### Step 3: Backend Deployment
 ```powershell
-.\deploy-aws-step3.ps1
+.\scripts\deployment\deploy-aws-step3.ps1
 ```
 - [ ] Task definition registered
 - [ ] ALB created
@@ -41,7 +41,7 @@
 
 ### Step 4: Database & Demo Users
 ```powershell
-.\deploy-aws-step4.ps1
+.\scripts\deployment\deploy-aws-step4.ps1
 ```
 - [ ] Backend health check passes
 - [ ] Migrations run successfully
@@ -50,7 +50,7 @@
 
 ### Step 5: Frontend Deployment
 ```powershell
-.\deploy-aws-step5.ps1
+.\scripts\deployment\deploy-aws-step5.ps1
 ```
 - [ ] S3 bucket created
 - [ ] Frontend built successfully

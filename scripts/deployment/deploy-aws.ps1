@@ -135,5 +135,5 @@ Write-Host "Cognito User Pool ID: $COGNITO_USER_POOL_ID" -ForegroundColor Green
 Write-Host "Cognito Client ID: $COGNITO_CLIENT_ID" -ForegroundColor Green
 
 Write-Host "`nVariables saved to aws-deployment-vars.json" -ForegroundColor Green
-Write-Host "`nNext: Wait 5-10 minutes for RDS to be available, then run deploy-aws-step2.ps1" -ForegroundColor Cyan
+Write-Host "`nNext: Wait 5-10 minutes for RDS to be available, then run .\scripts\deployment\deploy-aws-step2.ps1" -ForegroundColor Cyan
 

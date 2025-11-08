@@ -167,24 +167,24 @@ Each script:
 
 ```powershell
 # Step 1: Initial setup
-.\deploy-aws.ps1
+.\scripts\deployment\deploy-aws.ps1
 
 # Wait 5-10 minutes for RDS...
 
 # Step 2: Infrastructure
-.\deploy-aws-step2.ps1
+.\scripts\deployment\deploy-aws-step2.ps1
 
 # Step 3: Backend deployment
-.\deploy-aws-step3.ps1
+.\scripts\deployment\deploy-aws-step3.ps1
 
 # Wait 2-3 minutes for ECS service...
 
 # Step 4: Database & demo users
-.\deploy-aws-step4.ps1
+.\scripts\deployment\deploy-aws-step4.ps1
 # This now automatically runs migrations! ✨
 
 # Step 5: Frontend deployment
-.\deploy-aws-step5.ps1
+.\scripts\deployment\deploy-aws-step5.ps1
 
 # Wait 10-15 minutes for CloudFront...
 

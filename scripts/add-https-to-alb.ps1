@@ -120,7 +120,7 @@ try {
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Next steps:" -ForegroundColor Yellow
-    Write-Host "  1. Update deploy-frontend.ps1 to use HTTPS API URL" -ForegroundColor Cyan
+    Write-Host "  1. Update scripts\deployment\deploy-frontend.ps1 to use HTTPS API URL" -ForegroundColor Cyan
     Write-Host "  2. Rebuild and deploy the frontend" -ForegroundColor Cyan
     Write-Host "  3. Test the API at: https://$($vars.ALB_DNS)/health" -ForegroundColor Cyan
 } catch {

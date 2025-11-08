@@ -64,5 +64,5 @@ Write-Host "Migrations completed successfully!" -ForegroundColor Green
 # python scripts/verify_all_demo_accounts.py
 Write-Host "`nStep 19: Skipping demo user creation (not needed for production)" -ForegroundColor Yellow
 
-Write-Host "`nNext: Run deploy-aws-step5.ps1 to deploy frontend" -ForegroundColor Cyan
+Write-Host "`nNext: Run .\scripts\deployment\deploy-aws-step5.ps1 to deploy frontend" -ForegroundColor Cyan
 

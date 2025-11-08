@@ -486,6 +486,12 @@ python scripts/create_staging_env.py
 ### Production
 - See `_docs/guides/DEPLOYMENT_CHECKLIST.md` for deployment checklist
 - See `_docs/active/DEPLOYMENT_PRD.md` for complete deployment guide
+- AWS deployment scripts in `scripts/deployment/`:
+  - `deploy-aws.ps1` - Initial setup (Steps 1-5)
+  - `deploy-aws-step2.ps1` - Infrastructure (Steps 6-12)
+  - `deploy-aws-step3.ps1` - Backend deployment (Steps 13-16)
+  - `deploy-aws-step4.ps1` - Database & demo setup (Steps 17-19)
+  - `deploy-aws-step5.ps1` - Frontend deployment (Steps 20-23)
 - AWS infrastructure setup scripts in `scripts/setup_aws_infrastructure.sh/.ps1`
 - Docker production configuration in `Dockerfile` (multi-stage build)
 
@@ -653,12 +659,20 @@ PennyGadget/
 │   ├── react/                     # React component examples
 │   └── api-client/                # API client examples
 ├── scripts/                        # Utility scripts
+│   ├── deployment/                 # AWS deployment scripts
+│   │   ├── deploy-aws.ps1         # Initial AWS setup
+│   │   ├── deploy-aws-step2.ps1    # Infrastructure setup
+│   │   ├── deploy-aws-step3.ps1    # Backend deployment
+│   │   ├── deploy-aws-step4.ps1    # Database & demo setup
+│   │   ├── deploy-aws-step5.ps1    # Frontend deployment
+│   │   ├── deploy-frontend.ps1     # Frontend deployment
+│   │   └── ...                     # Additional deployment scripts
 │   ├── setup_db.py                # Database setup
 │   ├── seed_demo_data.py          # Demo data seeding
 │   ├── create_staging_env.py      # Staging environment
 │   ├── setup_beta_testing.py      # Beta testing setup
 │   ├── verify_complete_system.py  # System verification
-│   ├── deploy.sh/.ps1             # Deployment scripts
+│   ├── verify_all_demo_accounts.py # Demo account verification
 │   └── ...                        # Additional scripts
 ├── migrations/                     # Database migrations
 │   └── 001_initial_schema.sql     # Initial database schema

@@ -31,7 +31,7 @@ Before starting, ensure you have:
 Run the first deployment script:
 
 ```powershell
-.\deploy-aws.ps1
+.\scripts\deployment\deploy-aws.ps1
 ```
 
 This script will:
@@ -48,7 +48,7 @@ This script will:
 After RDS is ready, run:
 
 ```powershell
-.\deploy-aws-step2.ps1
+.\scripts\deployment\deploy-aws-step2.ps1
 ```
 
 This script will:
@@ -64,7 +64,7 @@ This script will:
 Run:
 
 ```powershell
-.\deploy-aws-step3.ps1
+.\scripts\deployment\deploy-aws-step3.ps1
 ```
 
 This script will:
@@ -81,7 +81,7 @@ This script will:
 Run:
 
 ```powershell
-.\deploy-aws-step4.ps1
+.\scripts\deployment\deploy-aws-step4.ps1
 ```
 
 This script will:
@@ -94,7 +94,7 @@ This script will:
 Run:
 
 ```powershell
-.\deploy-aws-step5.ps1
+.\scripts\deployment\deploy-aws-step5.ps1
 ```
 
 This script will:
