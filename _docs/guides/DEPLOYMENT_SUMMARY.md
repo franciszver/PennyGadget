@@ -45,7 +45,7 @@
 
 ### Documentation
 
-1. **`AWS_DEPLOYMENT_GUIDE.md`** - NEW
+1. **`_docs/guides/AWS_DEPLOYMENT_GUIDE.md`** - NEW
    - Complete deployment guide
    - Quick start instructions
    - Detailed step-by-step walkthrough
@@ -81,7 +81,7 @@ python scripts/run_migrations_aws.py
 
 ### 3. Comprehensive Documentation
 
-- Created `AWS_DEPLOYMENT_GUIDE.md` with:
+- Created `_docs/guides/AWS_DEPLOYMENT_GUIDE.md` with:
   - Quick start guide
   - Detailed verification steps
   - Troubleshooting section
@@ -219,12 +219,12 @@ aws logs tail /ecs/elevareai-api --follow
 2. **OpenAI API Key**: Must be added manually to ECS task definition after deployment
 3. **CloudFront**: Takes 10-15 minutes to fully deploy
 4. **HTTPS**: Currently HTTP only. Add ACM certificate for production HTTPS
-5. **Costs**: ~$40-50/month (see `AWS_DEPLOYMENT_GUIDE.md` for details)
+5. **Costs**: ~$40-50/month (see `_docs/guides/AWS_DEPLOYMENT_GUIDE.md` for details)
 
 ## 📚 Related Files
 
 - `demo-data-and-requirements-implementation.plan.md` - Original detailed plan
-- `AWS_DEPLOYMENT_GUIDE.md` - Complete deployment guide
+- `_docs/guides/AWS_DEPLOYMENT_GUIDE.md` - Complete deployment guide
 - `scripts/run_migrations_aws.py` - Migration runner script
 - `scripts/create_demo_users.py` - Demo user creation
 - `scripts/verify_all_demo_accounts.py` - Demo account verification

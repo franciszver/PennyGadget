@@ -269,7 +269,7 @@ Approximate monthly costs (us-east-1):
 ## 📚 Additional Resources
 
 - [AWS Deployment Plan](./demo-data-and-requirements-implementation.plan.md) - Detailed step-by-step plan
-- [Deployment Checklist](_docs/guides/DEPLOYMENT_CHECKLIST.md) - Pre-deployment checklist
+- [AWS Deployment Checklist](_docs/guides/AWS_DEPLOYMENT_CHECKLIST.md) - Pre-deployment checklist
 - [Demo User Guide](_docs/DEMO_USER_GUIDE.md) - Demo account details
 - [Troubleshooting Guide](_docs/guides/TROUBLESHOOTING_DOCKER.md) - Common issues
 

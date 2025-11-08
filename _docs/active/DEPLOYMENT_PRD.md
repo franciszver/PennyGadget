@@ -391,5 +391,5 @@ APNS_KEY_ID=...
 
 ---
 
-*See `DEPLOYMENT_CHECKLIST.md` for detailed deployment steps*
+*See `_docs/guides/AWS_DEPLOYMENT_CHECKLIST.md` for AWS deployment steps*
 

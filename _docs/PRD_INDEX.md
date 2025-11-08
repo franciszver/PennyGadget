@@ -93,7 +93,8 @@ Complete list of Product Requirements Documents (PRDs) and their status.
 
 ### For Production Deployment
 1. `DEPLOYMENT_PRD.md` - Deployment requirements
-2. `DEPLOYMENT_CHECKLIST.md` - Deployment checklist
+2. `_docs/guides/AWS_DEPLOYMENT_CHECKLIST.md` - AWS deployment checklist
+3. `_docs/guides/DEPLOYMENT_CHECKLIST.md` - General deployment checklist
 3. `docs/DEPLOYMENT.md` - Deployment guide
 
 ### For Future Planning

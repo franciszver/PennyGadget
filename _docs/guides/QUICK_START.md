@@ -147,7 +147,7 @@ uvicorn src.api.main:app --port 8001
 
 ## Production Deployment
 
-See `DEPLOYMENT_CHECKLIST.md` for complete production deployment guide.
+See `_docs/guides/AWS_DEPLOYMENT_CHECKLIST.md` for AWS deployment guide.
 
 ---
 

@@ -91,4 +91,4 @@ docker-compose -f docker-compose.staging.yml exec api python scripts/seed_demo_d
 4. Fix any issues
 5. Proceed to production deployment
 
-See `DEPLOYMENT_CHECKLIST.md` for production deployment steps.
+See `_docs/guides/AWS_DEPLOYMENT_CHECKLIST.md` for AWS deployment steps.

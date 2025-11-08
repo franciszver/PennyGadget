@@ -153,7 +153,7 @@ def check_documentation() -> Tuple[bool, List[str]]:
     required_docs = [
         "README.md",
         "QUICK_START.md",
-        "DEPLOYMENT_CHECKLIST.md",
+        "_docs/guides/AWS_DEPLOYMENT_CHECKLIST.md",
         "COMPLETE_PROJECT_STATUS.md",
         "FINAL_SUMMARY.md",
         "_docs/active/MVP_PRD.md",

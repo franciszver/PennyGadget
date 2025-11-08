@@ -81,7 +81,7 @@ if (-not $UseHTTPS) {
     Write-Host ""
     Write-Host "  ⚠️  WARNING: Using HTTP API URL with HTTPS frontend!" -ForegroundColor Red
     Write-Host "  This will cause mixed content errors in the browser." -ForegroundColor Red
-    Write-Host "  See FIX_MIXED_CONTENT.md for solutions." -ForegroundColor Yellow
+    Write-Host "  See _docs/guides/FIX_MIXED_CONTENT.md for solutions." -ForegroundColor Yellow
 }
 if ($COGNITO_USER_POOL_ID) {
     Write-Host "  VITE_COGNITO_USER_POOL_ID: $COGNITO_USER_POOL_ID" -ForegroundColor Cyan

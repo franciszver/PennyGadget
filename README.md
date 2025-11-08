@@ -484,7 +484,8 @@ python scripts/create_staging_env.py
 ```
 
 ### Production
-- See `_docs/guides/DEPLOYMENT_CHECKLIST.md` for deployment checklist
+- See `_docs/guides/AWS_DEPLOYMENT_CHECKLIST.md` for AWS deployment checklist
+- See `_docs/guides/DEPLOYMENT_CHECKLIST.md` for general deployment checklist
 - See `_docs/active/DEPLOYMENT_PRD.md` for complete deployment guide
 - AWS deployment scripts in `scripts/deployment/`:
   - `deploy-aws.ps1` - Initial setup (Steps 1-5)
@@ -548,7 +549,8 @@ pytest tests/test_integration_*.py
 
 ### Guides
 - `_docs/guides/QUICK_START.md` - Quick setup guide
-- `_docs/guides/DEPLOYMENT_CHECKLIST.md` - Deployment checklist
+- `_docs/guides/AWS_DEPLOYMENT_CHECKLIST.md` - AWS deployment checklist
+- `_docs/guides/DEPLOYMENT_CHECKLIST.md` - General deployment checklist
 - `_docs/guides/USER_TESTING.md` - Beta testing guide
 - `_docs/guides/STAGING_SETUP.md` - Staging environment
 - `_docs/guides/FRONTEND_INTEGRATION.md` - Frontend integration
@@ -709,7 +711,7 @@ PennyGadget/
    - Collect feedback
 
 4. **Deploy to Production**
-   - Follow `DEPLOYMENT_CHECKLIST.md`
+   - Follow `_docs/guides/AWS_DEPLOYMENT_CHECKLIST.md`
    - Configure production services
    - Monitor and optimize
 
