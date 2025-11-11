@@ -231,20 +231,20 @@ class WebhookService:
             
             # Update event status
             event.status = "failed"
-            event.response_body = str(e)[:1000]
+            event.response_body = "Delivery failed due to internal error"
             event.attempts = 1
             event.next_retry_at = datetime.utcnow() + timedelta(minutes=5)
             
             # Update webhook stats
             webhook.error_count += 1
-            webhook.last_error = str(e)
+            webhook.last_error = "Internal delivery error occurred"
             
             self.db.commit()
             
             return {
                 "success": False,
                 "webhook_id": str(webhook.id),
-                "error": str(e),
+                "error": "Internal webhook delivery error",
                 "event_id": str(event.id)
             }
     
