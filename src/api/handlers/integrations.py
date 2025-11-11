@@ -108,7 +108,13 @@ async def sync_google_calendar(
         start_date=start,
         end_date=end
     )
-    return {"success": result.get("success"), "data": result}
+    if not result.get("success"):
+        return {
+            "success": False,
+            "error": "An internal error occurred while syncing Google calendar.",
+            "data": None
+        }
+    return {"success": True, "data": result}
 
 
 @router.post("/calendar/google/create-event")
@@ -138,7 +144,13 @@ async def create_google_calendar_event(
         description=description,
         location=location
     )
-    return {"success": result.get("success"), "data": result}
+    if not result.get("success"):
+        return {
+            "success": False,
+            "error": "An internal error occurred while creating Google calendar event.",
+            "data": None
+        }
+    return {"success": True, "data": result}
 
 
 @router.post("/calendar/outlook/sync")
@@ -160,7 +172,14 @@ async def sync_outlook_calendar(
         start_date=start,
         end_date=end
     )
-    return {"success": result.get("success"), "data": result}
+    if not result.get("success"):
+        # Log the error already done in service; suppress details to client
+        return {
+            "success": False,
+            "error": "An internal error occurred while syncing Outlook calendar.",
+            "data": None
+        }
+    return {"success": True, "data": result}
 
 
 @router.post("/calendar/outlook/create-event")
@@ -188,7 +207,13 @@ async def create_outlook_calendar_event(
         body=body,
         location=location
     )
-    return {"success": result.get("success"), "data": result}
+    if not result.get("success"):
+        return {
+            "success": False,
+            "error": "An internal error occurred while creating Outlook calendar event.",
+            "data": None
+        }
+    return {"success": True, "data": result}
 
 
 # Notification Endpoints
