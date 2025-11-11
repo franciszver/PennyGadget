@@ -59,7 +59,10 @@ async def sync_blackboard_assignments(
         blackboard_url=blackboard_url,
         course_id=course_id
     )
-    return {"success": result.get("success"), "data": result}
+    if not result.get("success", False):
+        # Do not expose internal error details to the client; log is already server side
+        raise HTTPException(status_code=500, detail="An error occurred syncing with Blackboard LMS.")
+    return {"success": True, "data": result}
 
 
 @router.post("/lms/submit-grade")
