@@ -216,8 +216,17 @@ async def create_outlook_calendar_event(
             "error": "An internal error occurred while creating Outlook calendar event.",
             "data": None
         }
-    return {"success": True, "data": result}
-
+    # Only expose relevant, non-sensitive event fields
+    event = result.get("event", {})
+    sanitized_event = {
+        "id": event.get("id"),
+        "subject": event.get("subject"),
+        "start": event.get("start"),
+        "end": event.get("end"),
+        "location": event.get("location", {}).get("displayName") if event.get("location") else None,
+        "created_at": result.get("created_at"),
+    }
+    return {"success": True, "data": sanitized_event}
 
 # Notification Endpoints
 @router.post("/notifications/push")
