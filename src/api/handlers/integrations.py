@@ -381,5 +381,10 @@ async def retry_webhook_event(
     """Retry a failed webhook event"""
     service = WebhookService(db)
     result = service.retry_failed_webhook(event_id)
+    if not result.get("success", False) and "error" in result:
+        logger.error("Webhook event retry failed: %s", result["error"])
+        # Replace error details with a generic message
+        result = dict(result)  # copy or ensure we do not mutate underlying service data
+        result["error"] = "An internal error occurred. Please contact support or try again later."
     return result
 
