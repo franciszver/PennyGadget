@@ -79,7 +79,7 @@ class LMSService:
             logger.error(f"Canvas API error: {str(e)}")
             return {
                 "success": False,
-                "error": str(e),
+                "error": "Failed to sync assignments with Canvas LMS. Please try again later.",
                 "synced_at": datetime.utcnow().isoformat()
             }
     
@@ -117,7 +117,7 @@ class LMSService:
             logger.error(f"Blackboard API error: {str(e)}")
             return {
                 "success": False,
-                "error": str(e),
+                "error": "Failed to sync assignments with Blackboard LMS. Please try again later.",
                 "synced_at": datetime.utcnow().isoformat()
             }
     
