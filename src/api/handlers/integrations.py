@@ -108,7 +108,13 @@ async def sync_google_calendar(
         start_date=start,
         end_date=end
     )
-    return {"success": result.get("success"), "data": result}
+    if not result.get("success"):
+        return {
+            "success": False,
+            "error": "An internal error occurred while syncing Google calendar.",
+            "data": None
+        }
+    return {"success": True, "data": result}
 
 
 @router.post("/calendar/google/create-event")
@@ -138,15 +144,13 @@ async def create_google_calendar_event(
         description=description,
         location=location
     )
-    if result.get("success"):
-        # For success, return only non-sensitive fields.
-        # We return event information, which is safe.
-        return {"success": True, "event": result.get("event")}
-    else:
-        # Mask error details.
-        logger.error(f"Google Calendar event creation failed: {result.get('error', 'Unknown error')}")
-        raise HTTPException(status_code=500, detail="Failed to create Google Calendar event.")
-
+    if not result.get("success"):
+        return {
+            "success": False,
+            "error": "An internal error occurred while creating Google calendar event.",
+            "data": None
+        }
+    return {"success": True, "data": result}
 
 
 @router.post("/calendar/outlook/sync")
@@ -168,17 +172,14 @@ async def sync_outlook_calendar(
         start_date=start,
         end_date=end
     )
-    if result.get("success"):
+    if not result.get("success"):
+        # Log the error already done in service; suppress details to client
         return {
-            "success": True,
-            "events": result.get("events"),
-            "count": result.get("count", 0),
-            "synced_at": result.get("synced_at"),
+            "success": False,
+            "error": "An internal error occurred while syncing Outlook calendar.",
+            "data": None
         }
-    else:
-        logger.error(f"Outlook Calendar sync failed: {result.get('error', 'Unknown error')}")
-        raise HTTPException(status_code=500, detail="Failed to sync Outlook Calendar events.")
-
+    return {"success": True, "data": result}
 
 
 @router.post("/calendar/outlook/create-event")
@@ -206,12 +207,13 @@ async def create_outlook_calendar_event(
         body=body,
         location=location
     )
-    if result.get("success"):
-        return {"success": True, "event": result.get("event")}
-    else:
-        logger.error(f"Outlook Calendar event creation failed: {result.get('error', 'Unknown error')}")
-        raise HTTPException(status_code=500, detail="Failed to create Outlook Calendar event.")
-
+    if not result.get("success"):
+        return {
+            "success": False,
+            "error": "An internal error occurred while creating Outlook calendar event.",
+            "data": None
+        }
+    return {"success": True, "data": result}
 
 
 # Notification Endpoints
