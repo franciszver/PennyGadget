@@ -275,6 +275,6 @@ class CalendarService:
             logger.error(f"Outlook Calendar create event error: {str(e)}")
             return {
                 "success": False,
-                "error": str(e)
+                "error": "An internal error occurred while creating Outlook calendar event."
             }
 
