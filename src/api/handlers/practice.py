@@ -89,7 +89,7 @@ async def assign_practice_async(
     return {
         "success": True,
         "job_id": str(job.id),
-        "status": job.status.value,
+        "status": job.status,
         "message": "Practice generation started. Use the job_id to check status.",
         "status_url": f"/api/v1/jobs/{job.id}",
         "websocket_url": f"/api/v1/jobs/{job.id}/ws"

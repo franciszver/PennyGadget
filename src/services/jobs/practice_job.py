@@ -63,7 +63,7 @@ class PracticeJobService:
         """
         job = Job(
             job_type="practice_generation",
-            status=JobStatus.PENDING,
+            status=JobStatus.PENDING.value,
             student_id=UUID(student_id),
             parameters={
                 "student_id": student_id,
@@ -94,7 +94,7 @@ class PracticeJobService:
         
         try:
             # Update status to processing
-            job.status = JobStatus.PROCESSING
+            job.status = JobStatus.PROCESSING.value
             job.progress_percent = 0
             job.progress_message = "Starting practice generation..."
             self.db.commit()
@@ -351,7 +351,7 @@ class PracticeJobService:
             }
             
             # Update job as completed
-            job.status = JobStatus.COMPLETED
+            job.status = JobStatus.COMPLETED.value
             job.progress_percent = 100
             job.progress_message = "Practice assignment ready!"
             job.result = result
@@ -388,7 +388,7 @@ class PracticeJobService:
             
         except Exception as e:
             logger.error(f"Job {job_id} failed: {str(e)}", exc_info=True)
-            job.status = JobStatus.FAILED
+            job.status = JobStatus.FAILED.value
             job.error_message = str(e)
             job.progress_message = f"Error: {str(e)}"
             self.db.commit()

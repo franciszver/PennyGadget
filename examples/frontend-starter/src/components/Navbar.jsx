@@ -3,6 +3,10 @@ import { useAuth } from '../contexts/AuthContext';
 import Notifications from './Notifications';
 import './Navbar.css';
 
+// Version info injected at build time
+const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev';
+const BUILD_TIME = typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : 'local';
+
 function Navbar() {
   const { user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -10,6 +14,22 @@ function Navbar() {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  // Format build time for display
+  const formatBuildTime = (isoString) => {
+    if (!isoString || isoString === 'local') return 'local';
+    try {
+      const date = new Date(isoString);
+      return date.toLocaleString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit'
+      });
+    } catch {
+      return isoString.slice(0, 16);
+    }
   };
 
   if (!isAuthenticated) {
@@ -22,6 +42,9 @@ function Navbar() {
         <Link to="/dashboard" className="navbar-brand">
           <img src="/elevare-logo.svg" alt="ElevareAI" className="navbar-logo" />
           <span className="navbar-brand-text">ElevareAI</span>
+          <span className="navbar-version" title={`Build: ${formatBuildTime(BUILD_TIME)}`}>
+            v{APP_VERSION}
+          </span>
         </Link>
         <div className="navbar-links">
           <Link to="/dashboard">Dashboard</Link>

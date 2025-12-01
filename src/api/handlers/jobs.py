@@ -43,16 +43,16 @@ async def get_job_status(
     response = {
         "job_id": str(job.id),
         "job_type": job.job_type,
-        "status": job.status.value,
+        "status": job.status,
         "progress_percent": job.progress_percent,
         "progress_message": job.progress_message,
         "created_at": job.created_at.isoformat() if job.created_at else None,
         "updated_at": job.updated_at.isoformat() if job.updated_at else None
     }
     
-    if job.status == JobStatus.COMPLETED and job.result:
+    if job.status == JobStatus.COMPLETED.value and job.result:
         response["result"] = job.result
-    elif job.status == JobStatus.FAILED:
+    elif job.status == JobStatus.FAILED.value:
         response["error"] = job.error_message
     
     return {
@@ -95,20 +95,20 @@ async def websocket_job_updates(websocket: WebSocket, job_id: UUID):
             # Send initial state
             await websocket.send_json({
                 "type": "status",
-                "status": job.status.value,
+                "status": job.status,
                 "progress_percent": job.progress_percent,
                 "progress_message": job.progress_message
             })
             
             # If already completed, send result and close
-            if job.status == JobStatus.COMPLETED:
+            if job.status == JobStatus.COMPLETED.value:
                 await websocket.send_json({
                     "type": "completed",
                     "result": job.result
                 })
                 await websocket.close()
                 return
-            elif job.status == JobStatus.FAILED:
+            elif job.status == JobStatus.FAILED.value:
                 await websocket.send_json({
                     "type": "failed",
                     "error": job.error_message
@@ -130,7 +130,7 @@ async def websocket_job_updates(websocket: WebSocket, job_id: UUID):
                 if job.status != last_status or job.progress_percent != last_progress:
                     await websocket.send_json({
                         "type": "status",
-                        "status": job.status.value,
+                        "status": job.status,
                         "progress_percent": job.progress_percent,
                         "progress_message": job.progress_message
                     })
@@ -139,7 +139,7 @@ async def websocket_job_updates(websocket: WebSocket, job_id: UUID):
                     last_progress = job.progress_percent
                 
                 # Check if completed
-                if job.status == JobStatus.COMPLETED:
+                if job.status == JobStatus.COMPLETED.value:
                     await websocket.send_json({
                         "type": "completed",
                         "result": job.result
@@ -147,7 +147,7 @@ async def websocket_job_updates(websocket: WebSocket, job_id: UUID):
                     break
                 
                 # Check if failed
-                if job.status == JobStatus.FAILED:
+                if job.status == JobStatus.FAILED.value:
                     await websocket.send_json({
                         "type": "failed",
                         "error": job.error_message

@@ -15,7 +15,7 @@ function Practice() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const subjectFromUrl = searchParams.get('subject');
-  
+
   // Async practice generation hook
   const asyncPractice = useAsyncPractice();
 
@@ -42,7 +42,7 @@ function Practice() {
 
     // Convert to sorted array
     const subjects = Array.from(subjectsSet).sort();
-    
+
     // If no subjects found, provide default options
     if (subjects.length === 0) {
       return ['Math', 'Science', 'English'];
@@ -82,7 +82,7 @@ function Practice() {
           setAllItems(state.allItems);
           setAttempts(state.attempts || {});
           setCompletedQuestions(state.completedQuestions || {});
-          
+
           const index = parseInt(questionIndexFromUrl, 10);
           if (index >= 0 && index < state.allItems.length) {
             // Move to next question (since they already answered this one correctly)
@@ -103,7 +103,7 @@ function Practice() {
               const totalAttempts = Object.values(state.attempts || {}).reduce((sum, count) => sum + count, 0);
               const averageAttempts = totalQuestions > 0 ? totalAttempts / totalQuestions : 0;
               const needsTutorHelp = totalQuestions > 0 && ((correctCount / totalQuestions) < 0.5 || averageAttempts > 2);
-              
+
               setSummaryData({
                 totalQuestions,
                 correctCount,
@@ -116,7 +116,7 @@ function Practice() {
               setShowSummary(true);
             }
           }
-          
+
           // Clear saved state and URL param
           localStorage.removeItem('practice_session_state');
           const newParams = new URLSearchParams(searchParams);
@@ -147,12 +147,12 @@ function Practice() {
     mutationFn: (data) => api.assignPractice(data),
     onSuccess: (response) => {
       const practiceData = response.data?.data || response.data;
-      
+
       if (!practiceData || !practiceData.items || practiceData.items.length === 0) {
         showError('No practice items were returned. Please try again.');
         return;
       }
-      
+
       // Initialize all items
       const items = practiceData.items.map((item, idx) => ({
         assignment_id: practiceData.assignment_id,
@@ -176,7 +176,7 @@ function Practice() {
       setCompletedQuestions({});
       setShowSummary(false);
       setSummaryData(null);
-      
+
       success('Practice assignment loaded!');
     },
     onError: (err) => {
@@ -187,7 +187,7 @@ function Practice() {
   });
 
   const completeMutation = useMutation({
-    mutationFn: ({ assignmentId, itemId, data, isCorrect }) => 
+    mutationFn: ({ assignmentId, itemId, data, isCorrect }) =>
       api.completePractice(assignmentId, itemId, data).then(response => ({
         ...response,
         _isCorrect: isCorrect
@@ -195,7 +195,7 @@ function Practice() {
     onSuccess: (response, variables) => {
       const result = response.data?.data || {};
       const isCorrect = response._isCorrect !== undefined ? response._isCorrect : false;
-      
+
       // Update attempts
       const newAttempts = { ...attempts };
       newAttempts[currentIndex] = (newAttempts[currentIndex] || 0) + 1;
@@ -240,6 +240,59 @@ function Practice() {
     },
   });
 
+  // Handle async practice completion
+  useEffect(() => {
+    if (asyncPractice.isCompleted && asyncPractice.result) {
+      console.log('[PRACTICE] Async practice completed:', asyncPractice.result);
+
+      // Result structure is {data: {...}, success: true} - extract the inner data
+      const practiceData = asyncPractice.result?.data || asyncPractice.result;
+
+      if (!practiceData || !practiceData.items || practiceData.items.length === 0) {
+        console.error('[PRACTICE] Invalid practice data structure:', asyncPractice.result);
+        showError('No practice items were returned. Please try again.');
+        asyncPractice.reset();
+        return;
+      }
+
+      // Initialize all items (same logic as assignMutation.onSuccess)
+      const items = practiceData.items.map((item, idx) => ({
+        assignment_id: practiceData.assignment_id,
+        item_id: item.item_id,
+        question_text: item.question || item.question_text,
+        answer_text: item.answer || item.answer_text,
+        choices: item.choices || [],
+        correct_answer: item.correct_answer || "A",
+        explanation: item.explanation,
+        difficulty: item.difficulty,
+        source: item.source,
+        start_time: Date.now(),
+        index: idx
+      }));
+
+      setAllItems(items);
+      setCurrentIndex(0);
+      setSelectedChoice('');
+      setQuestionState('answering');
+      setAttempts({});
+      setCompletedQuestions({});
+      setShowSummary(false);
+      setSummaryData(null);
+
+      success('Practice assignment loaded!');
+      asyncPractice.reset();
+    }
+  }, [asyncPractice.isCompleted, asyncPractice.result]);
+
+  // Handle async practice failure
+  useEffect(() => {
+    if (asyncPractice.isFailed && asyncPractice.error) {
+      console.error('[PRACTICE] Async practice failed:', asyncPractice.error);
+      showError(asyncPractice.error);
+      asyncPractice.reset();
+    }
+  }, [asyncPractice.isFailed, asyncPractice.error]);
+
   const handleStartPractice = () => {
     // Check if user has no goals
     const goals = progressData?.data?.goals || [];
@@ -283,15 +336,15 @@ function Practice() {
       showError('Please select an answer before submitting.');
       return;
     }
-    
+
     // Extract the letter from selected choice (e.g., "A" from "A) Option text")
     const selectedLetter = selectedChoice.charAt(0).toUpperCase();
     const isCorrect = selectedLetter === (currentItem.correct_answer || 'A').toUpperCase();
-    
+
     // Track start time for time calculation
     const startTime = currentItem.start_time || Date.now();
     const timeSpent = Math.floor((Date.now() - startTime) / 1000);
-    
+
     completeMutation.mutate({
       assignmentId: currentItem.assignment_id,
       itemId: currentItem.item_id,
@@ -327,14 +380,14 @@ function Practice() {
       selectedSubject
     };
     localStorage.setItem('practice_session_state', JSON.stringify(practiceState));
-    
+
     // Navigate to QA with the question preloaded
     const questionText = currentItem.question_text;
     const explanation = currentItem.explanation || '';
-    
+
     // Create a query that asks for deeper explanation
     const deeperQuery = `Can you provide a deeper explanation of this practice question: "${questionText}"${explanation ? ` The current explanation is: "${explanation}".` : ''} Please provide more context, examples, and help me understand the underlying concepts better.`;
-    
+
     // Navigate to QA with preloaded query and return info
     navigate(`/qa?preload=${encodeURIComponent(deeperQuery)}&returnTo=practice&questionIndex=${currentIndex}&subject=${encodeURIComponent(selectedSubject)}`);
   };
@@ -396,18 +449,18 @@ function Practice() {
           boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
         }}>
           <h1>Practice Summary</h1>
-          
+
           <div style={{ marginTop: '1.5rem' }}>
             <h2>Your Results</h2>
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: '1fr 1fr', 
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
               gap: '1rem',
               marginTop: '1rem'
             }}>
-              <div style={{ 
-                padding: '1rem', 
-                backgroundColor: '#d4edda', 
+              <div style={{
+                padding: '1rem',
+                backgroundColor: '#d4edda',
                 borderRadius: '4px',
                 textAlign: 'center'
               }}>
@@ -416,9 +469,9 @@ function Practice() {
                 </div>
                 <div style={{ color: '#155724' }}>Correct</div>
               </div>
-              <div style={{ 
-                padding: '1rem', 
-                backgroundColor: '#f8d7da', 
+              <div style={{
+                padding: '1rem',
+                backgroundColor: '#f8d7da',
                 borderRadius: '4px',
                 textAlign: 'center'
               }}>
@@ -444,7 +497,7 @@ function Practice() {
                 borderRadius: '4px'
               }}>
                 <p style={{ margin: 0, fontWeight: '500', color: '#856404' }}>
-                  ⚠️ Your tutor has been notified to provide additional support. 
+                  ⚠️ Your tutor has been notified to provide additional support.
                   Your progress will be updated accordingly.
                 </p>
               </div>
@@ -485,41 +538,41 @@ function Practice() {
     const isStartingPractice = assignMutation.isPending;
     const isAsyncLoading = asyncPractice.isLoading;
     const isLoading = isCreatingGoal || isStartingPractice || isAsyncLoading;
-    
+
     return (
       <div className="practice">
         <h1>Practice Assignment</h1>
         {isLoading ? (
           <div>
-            <LoadingSpinner 
+            <LoadingSpinner
               message={
-                isCreatingGoal 
-                  ? "Creating goal..." 
-                  : isAsyncLoading 
+                isCreatingGoal
+                  ? "Creating goal..."
+                  : isAsyncLoading
                     ? `Generating practice questions... ${asyncPractice.progress.percent}% - ${asyncPractice.progress.message || ''}`
                     : "Generating Assignment...."
-              } 
+              }
             />
             {isAsyncLoading && asyncPractice.progress.percent > 0 && (
-              <div style={{ 
-                marginTop: '1rem', 
-                padding: '1rem', 
-                backgroundColor: '#f0f0f0', 
+              <div style={{
+                marginTop: '1rem',
+                padding: '1rem',
+                backgroundColor: '#f0f0f0',
                 borderRadius: '4px',
                 maxWidth: '500px',
                 margin: '1rem auto'
               }}>
-                <div style={{ 
-                  width: '100%', 
-                  backgroundColor: '#e0e0e0', 
-                  borderRadius: '4px', 
+                <div style={{
+                  width: '100%',
+                  backgroundColor: '#e0e0e0',
+                  borderRadius: '4px',
                   height: '20px',
                   marginBottom: '0.5rem'
                 }}>
-                  <div style={{ 
-                    width: `${asyncPractice.progress.percent}%`, 
-                    backgroundColor: 'var(--primary-color)', 
-                    height: '100%', 
+                  <div style={{
+                    width: `${asyncPractice.progress.percent}%`,
+                    backgroundColor: 'var(--primary-color)',
+                    height: '100%',
                     borderRadius: '4px',
                     transition: 'width 0.3s ease'
                   }}></div>
@@ -534,8 +587,8 @@ function Practice() {
           <div className="practice-setup">
             <label>
               Subject:
-              <select 
-                value={selectedSubject} 
+              <select
+                value={selectedSubject}
                 onChange={(e) => setSelectedSubject(e.target.value)}
                 style={{ minWidth: '200px' }}
                 disabled={isLoading}
@@ -552,8 +605,8 @@ function Practice() {
                 No goals yet. We'll create a goal for "{selectedSubject}" when you start practice.
               </p>
             )}
-            <button 
-              onClick={handleStartPractice} 
+            <button
+              onClick={handleStartPractice}
               disabled={isLoading || !selectedSubject}
             >
               {isCreatingGoal ? 'Creating Goal...' : isStartingPractice ? 'Starting Practice...' : 'Start Practice'}
@@ -570,10 +623,10 @@ function Practice() {
       <div style={{ marginBottom: '1rem', fontSize: '0.875rem', color: '#666' }}>
         Question {currentIndex + 1} of {allItems.length}
       </div>
-      
+
       <div className="practice-question">
         <h2>{currentItem.question_text}</h2>
-        
+
         {questionState === 'correct' && currentItem.explanation && (
           <div style={{
             marginTop: '1.5rem',
@@ -657,15 +710,15 @@ function Practice() {
           </div>
         )}
 
-        <div style={{ 
-          marginTop: '1.5rem', 
-          display: 'flex', 
+        <div style={{
+          marginTop: '1.5rem',
+          display: 'flex',
           gap: '1rem',
           alignItems: 'center'
         }}>
           {(questionState === 'answering' || questionState === 'incorrect') && (
-            <button 
-              onClick={handleSubmit} 
+            <button
+              onClick={handleSubmit}
               disabled={completeMutation.isPending || !selectedChoice}
               style={{
                 padding: '0.75rem 2rem',

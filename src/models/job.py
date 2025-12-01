@@ -3,7 +3,7 @@ Job Models
 For tracking async background jobs (e.g., practice generation)
 """
 
-from sqlalchemy import Column, String, Text, Integer, JSON, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, String, Text, Integer, JSON, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import uuid
@@ -26,7 +26,7 @@ class Job(Base, TimestampMixin):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     job_type = Column(String(50), nullable=False, index=True)  # e.g., "practice_generation"
-    status = Column(SQLEnum(JobStatus), default=JobStatus.PENDING, nullable=False, index=True)
+    status = Column(String(20), default=JobStatus.PENDING.value, nullable=False, index=True)
     
     # Job context
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
