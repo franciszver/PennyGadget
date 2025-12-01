@@ -15,7 +15,7 @@ from src.services.integrations.webhooks import WebhookService
 from src.models.practice import PracticeAssignment, PracticeBankItem
 from src.models.user import User
 from src.models.subject import Subject
-from src.api.handlers.practice import _generate_choices_from_answer
+from src.services.practice.utils import generate_choices_from_answer
 from sqlalchemy import func
 from datetime import datetime, timezone
 import uuid
@@ -241,7 +241,7 @@ class PracticeJobService:
                 if bank_item.question_text:
                     used_question_texts.add(bank_item.question_text.strip().lower())
                 
-                choices, correct_answer = _generate_choices_from_answer(bank_item.answer_text)
+                choices, correct_answer = generate_choices_from_answer(bank_item.answer_text)
                 
                 items.append({
                     "item_id": str(assignment.id),
@@ -308,7 +308,7 @@ class PracticeJobService:
                     choices = ai_item_data.get("choices", [])
                     correct_answer = ai_item_data.get("correct_answer", "A")
                     if not choices or len(choices) < 4:
-                        choices, correct_answer = _generate_choices_from_answer(ai_item_data["answer_text"])
+                        choices, correct_answer = generate_choices_from_answer(ai_item_data["answer_text"])
                     
                     items.append({
                         "item_id": str(assignment.id),

@@ -15,6 +15,9 @@ function Practice() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const subjectFromUrl = searchParams.get('subject');
+  
+  // Async practice generation hook
+  const asyncPractice = useAsyncPractice();
 
   // Fetch user's progress to get goals and suggestions
   const { data: progressData, isLoading: progressLoading } = useQuery({

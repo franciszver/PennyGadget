@@ -22,6 +22,7 @@ from src.services.practice.adaptive import AdaptivePracticeService
 from src.services.practice.generator import PracticeGenerator
 from src.services.jobs.practice_job import PracticeJobService
 from src.services.goals.progress import GoalProgressService
+from src.services.practice.utils import generate_choices_from_answer
 import uuid
 from datetime import datetime, timezone
 import logging
@@ -29,6 +30,9 @@ import random
 import json
 
 logger = logging.getLogger(__name__)
+
+# Alias for backward compatibility
+_generate_choices_from_answer = generate_choices_from_answer
 
 router = APIRouter(prefix="/practice", tags=["practice"])
 
@@ -49,37 +53,6 @@ class AsyncPracticeRequest(BaseModel):
     num_items: int = 5
     goal_tags: Optional[list[str]] = None
     webhook_url: Optional[str] = None  # Optional webhook URL for completion notification
-
-
-def _generate_choices_from_answer(answer_text: str) -> Tuple[List[str], str]:
-    """Generate 4 multiple choice options from an answer
-    
-    Returns:
-        tuple: (choices list, correct_answer_letter)
-    """
-    # Create distractors
-    distractors = [
-        "A related but incorrect option",
-        "Another plausible but wrong answer",
-        "An incorrect alternative"
-    ]
-    
-    # Combine correct answer with distractors and shuffle
-    all_options = [answer_text] + distractors
-    random.shuffle(all_options)
-    
-    # Format as A, B, C, D
-    letters = ["A", "B", "C", "D"]
-    choices = [f"{letter}) {option}" for letter, option in zip(letters, all_options)]
-    
-    # Find which letter has the correct answer
-    correct_letter = None
-    for i, option in enumerate(all_options):
-        if option == answer_text:
-            correct_letter = letters[i]
-            break
-    
-    return choices, correct_letter or "A"
 
 
 @router.post("/assign/async")

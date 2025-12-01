@@ -14,6 +14,9 @@ if (-not (Test-Path "aws-deployment-vars.json")) {
 
 $vars = Get-Content "aws-deployment-vars.json" | ConvertFrom-Json
 
+# Set AWS profile
+$env:AWS_PROFILE = "default1"
+
 $REGION = $vars.REGION
 $BUCKET_NAME = $vars.BUCKET_NAME
 $ALB_DNS = $vars.ALB_DNS
@@ -108,7 +111,7 @@ Write-Host ""
 
 # Upload to S3
 Write-Host "Uploading frontend to S3..." -ForegroundColor Yellow
-aws s3 sync dist/ "s3://$BUCKET_NAME" --delete --region $REGION
+aws s3 sync dist/ "s3://$BUCKET_NAME" --delete --region $REGION --profile default1
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: S3 upload failed!" -ForegroundColor Red
@@ -121,12 +124,86 @@ Write-Host ""
 
 Pop-Location
 
+# Configure CloudFront custom error response for SPA routing (404 -> 200 with index.html)
+Write-Host "Configuring CloudFront custom error response for SPA routing..." -ForegroundColor Yellow
+try {
+    # Get current distribution config
+    $CF_CONFIG = aws cloudfront get-distribution-config `
+        --id $CF_DIST_ID `
+        --region $REGION `
+        --profile default1 `
+        --query 'DistributionConfig' `
+        --output json | ConvertFrom-Json
+    
+    # Check if custom error response already exists
+    $has404Error = $false
+    if ($CF_CONFIG.CustomErrorResponses -and $CF_CONFIG.CustomErrorResponses.Items) {
+        foreach ($errResp in $CF_CONFIG.CustomErrorResponses.Items) {
+            if ($errResp.ErrorCode -eq 404) {
+                $has404Error = $true
+                break
+            }
+        }
+    }
+    
+    if (-not $has404Error) {
+        # Add custom error response for 404
+        if (-not $CF_CONFIG.CustomErrorResponses) {
+            $CF_CONFIG.CustomErrorResponses = @{
+                Quantity = 0
+                Items = @()
+            }
+        }
+        
+        $CF_CONFIG.CustomErrorResponses.Items += @{
+            ErrorCode = 404
+            ResponsePagePath = "/index.html"
+            ResponseCode = "200"
+            ErrorCachingMinTTL = 300
+        }
+        $CF_CONFIG.CustomErrorResponses.Quantity = $CF_CONFIG.CustomErrorResponses.Items.Count
+        
+        # Get ETag for update
+        $ETAG = aws cloudfront get-distribution-config `
+            --id $CF_DIST_ID `
+            --region $REGION `
+            --profile default1 `
+            --query 'ETag' `
+            --output text
+        
+        # Update distribution
+        $CF_CONFIG_JSON = $CF_CONFIG | ConvertTo-Json -Depth 10 -Compress
+        $CF_CONFIG_JSON | Out-File -FilePath "cloudfront-update.json" -Encoding UTF8 -NoNewline
+        
+        aws cloudfront update-distribution `
+            --id $CF_DIST_ID `
+            --distribution-config file://cloudfront-update.json `
+            --if-match $ETAG `
+            --region $REGION `
+            --profile default1 | Out-Null
+        
+        Remove-Item "cloudfront-update.json" -ErrorAction SilentlyContinue
+        
+        Write-Host "CloudFront custom error response configured (404 -> 200 with index.html)" -ForegroundColor Green
+    } else {
+        Write-Host "CloudFront custom error response already configured" -ForegroundColor Cyan
+    }
+} catch {
+    $errMsg = $_.Exception.Message
+    Write-Host "WARNING: Could not configure CloudFront custom error response: $errMsg" -ForegroundColor Yellow
+    Write-Host "You may need to configure it manually in the AWS Console:" -ForegroundColor Yellow
+    Write-Host "  CloudFront -> Distribution -> Error Pages -> Create Custom Error Response" -ForegroundColor Yellow
+    Write-Host "  Error Code: 404, Response Page Path: /index.html, HTTP Response Code: 200" -ForegroundColor Yellow
+}
+Write-Host ""
+
 # Invalidate CloudFront cache
 Write-Host "Invalidating CloudFront cache..." -ForegroundColor Yellow
 $invalidation = aws cloudfront create-invalidation `
     --distribution-id $CF_DIST_ID `
     --paths "/*" `
     --region $REGION `
+    --profile default1 `
     --query 'Invalidation.{Id:Id,Status:Status}' `
     --output json | ConvertFrom-Json
 
