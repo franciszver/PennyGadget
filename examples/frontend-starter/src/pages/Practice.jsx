@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { api } from '../services/apiClient';
+import { useAsyncPractice } from '../hooks/useAsyncPractice';
 import LoadingSpinner from '../components/LoadingSpinner';
 import './Practice.css';
 
@@ -241,6 +242,16 @@ function Practice() {
     const goals = progressData?.data?.goals || [];
     const hasNoGoals = goals.length === 0;
 
+    const startPracticeAsync = () => {
+      // Use async endpoint to avoid 504 timeout
+      asyncPractice.startJob({
+        student_id: user.id,
+        subject: selectedSubject,
+        num_items: 5,
+        difficulty_level: 5,
+      });
+    };
+
     if (hasNoGoals) {
       // Create a goal first, then start practice
       createGoalMutation.mutate(
@@ -253,22 +264,14 @@ function Practice() {
         },
         {
           onSuccess: () => {
-            // After goal is created, start practice
-            assignMutation.mutate({
-              student_id: user.id,
-              subject: selectedSubject,
-              difficulty_level: 5,
-            });
+            // After goal is created, start async practice
+            startPracticeAsync();
           },
         }
       );
     } else {
-      // User has goals, start practice directly
-      assignMutation.mutate({
-        student_id: user.id,
-        subject: selectedSubject,
-        difficulty_level: 5,
-      });
+      // User has goals, start async practice directly
+      startPracticeAsync();
     }
   };
 
@@ -477,13 +480,53 @@ function Practice() {
   if (allItems.length === 0) {
     const isCreatingGoal = createGoalMutation.isPending;
     const isStartingPractice = assignMutation.isPending;
-    const isLoading = isCreatingGoal || isStartingPractice;
+    const isAsyncLoading = asyncPractice.isLoading;
+    const isLoading = isCreatingGoal || isStartingPractice || isAsyncLoading;
     
     return (
       <div className="practice">
         <h1>Practice Assignment</h1>
         {isLoading ? (
-          <LoadingSpinner message={isCreatingGoal ? "Creating goal..." : "Generating Assignment...."} />
+          <div>
+            <LoadingSpinner 
+              message={
+                isCreatingGoal 
+                  ? "Creating goal..." 
+                  : isAsyncLoading 
+                    ? `Generating practice questions... ${asyncPractice.progress.percent}% - ${asyncPractice.progress.message || ''}`
+                    : "Generating Assignment...."
+              } 
+            />
+            {isAsyncLoading && asyncPractice.progress.percent > 0 && (
+              <div style={{ 
+                marginTop: '1rem', 
+                padding: '1rem', 
+                backgroundColor: '#f0f0f0', 
+                borderRadius: '4px',
+                maxWidth: '500px',
+                margin: '1rem auto'
+              }}>
+                <div style={{ 
+                  width: '100%', 
+                  backgroundColor: '#e0e0e0', 
+                  borderRadius: '4px', 
+                  height: '20px',
+                  marginBottom: '0.5rem'
+                }}>
+                  <div style={{ 
+                    width: `${asyncPractice.progress.percent}%`, 
+                    backgroundColor: 'var(--primary-color)', 
+                    height: '100%', 
+                    borderRadius: '4px',
+                    transition: 'width 0.3s ease'
+                  }}></div>
+                </div>
+                <div style={{ fontSize: '0.9rem', color: '#666', textAlign: 'center' }}>
+                  {asyncPractice.progress.message || 'Processing...'}
+                </div>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="practice-setup">
             <label>

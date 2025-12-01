@@ -88,6 +88,14 @@ export const api = {
     });
     return apiClient.post(`/practice/assign?${params.toString()}`);
   },
+  // Async practice assignment (returns job ID immediately)
+  assignPracticeAsync: (data) => {
+    return apiClient.post('/practice/assign/async', data);
+  },
+  // Get job status
+  getJobStatus: (jobId) => {
+    return apiClient.get(`/jobs/${jobId}`);
+  },
   completePractice: (assignmentId, itemId, data) => 
     apiClient.post(`/practice/complete?assignment_id=${assignmentId}&item_id=${itemId}`, data),
   

@@ -12,3 +12,4 @@ CREATE INDEX IF NOT EXISTS idx_qa_goal ON qa_interactions(goal_id);
 CREATE INDEX IF NOT EXISTS idx_qa_student_goal ON qa_interactions(student_id, goal_id);
 
 
+

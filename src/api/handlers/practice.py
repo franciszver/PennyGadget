@@ -4,7 +4,7 @@ POST /practice/assign - Assign adaptive practice items
 POST /practice/complete - Record practice completion
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session as DBSession
 from sqlalchemy import func
 from typing import Optional, List, Tuple
@@ -15,15 +15,18 @@ from datetime import timedelta
 from src.config.database import get_db
 from src.api.middleware.auth import get_current_user_optional
 from src.models.practice import PracticeBankItem, PracticeAssignment, StudentRating
+from src.models.job import Job, JobStatus
 from src.models.user import User
 from src.models.subject import Subject
 from src.services.practice.adaptive import AdaptivePracticeService
 from src.services.practice.generator import PracticeGenerator
+from src.services.jobs.practice_job import PracticeJobService
 from src.services.goals.progress import GoalProgressService
 import uuid
 from datetime import datetime, timezone
 import logging
 import random
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +39,16 @@ class CompletePracticeRequest(BaseModel):
     correct: bool
     time_taken_seconds: int
     hints_used: int = 0
+
+
+class AsyncPracticeRequest(BaseModel):
+    """Request body for async practice assignment"""
+    student_id: str
+    subject: str
+    topic: Optional[str] = None
+    num_items: int = 5
+    goal_tags: Optional[list[str]] = None
+    webhook_url: Optional[str] = None  # Optional webhook URL for completion notification
 
 
 def _generate_choices_from_answer(answer_text: str) -> Tuple[List[str], str]:
@@ -67,6 +80,47 @@ def _generate_choices_from_answer(answer_text: str) -> Tuple[List[str], str]:
             break
     
     return choices, correct_letter or "A"
+
+
+@router.post("/assign/async")
+async def assign_practice_async(
+    request: AsyncPracticeRequest,
+    background_tasks: BackgroundTasks,
+    db: DBSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user_optional)
+):
+    """
+    Assign practice items asynchronously (returns immediately with job ID)
+    
+    Use this endpoint for long-running practice generation that may take 30+ seconds.
+    The job will be processed in the background and you can:
+    - Poll the job status via GET /api/v1/jobs/{job_id}
+    - Connect via WebSocket to /api/v1/jobs/{job_id}/ws for real-time updates
+    - Provide a webhook_url to receive completion notification
+    """
+    job_service = PracticeJobService(db)
+    
+    # Create job
+    job = job_service.create_job(
+        student_id=request.student_id,
+        subject=request.subject,
+        topic=request.topic,
+        num_items=request.num_items,
+        goal_tags=request.goal_tags,
+        webhook_url=request.webhook_url
+    )
+    
+    # Process job in background
+    background_tasks.add_task(job_service.process_job, job.id)
+    
+    return {
+        "success": True,
+        "job_id": str(job.id),
+        "status": job.status.value,
+        "message": "Practice generation started. Use the job_id to check status.",
+        "status_url": f"/api/v1/jobs/{job.id}",
+        "websocket_url": f"/api/v1/jobs/{job.id}/ws"
+    }
 
 
 @router.post("/assign")

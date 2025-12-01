@@ -248,6 +248,64 @@ class WebhookService:
                 "event_id": str(event.id)
             }
     
+    def trigger_webhook(
+        self,
+        event_type: str,
+        payload: Dict,
+        webhook_url: Optional[str] = None,
+        webhook_id: Optional[str] = None,
+        user_id: Optional[str] = None
+    ) -> Dict:
+        """
+        Trigger webhook to a specific URL (for direct webhook URLs)
+        or find registered webhooks
+        
+        Args:
+            event_type: Event type
+            payload: Event payload
+            webhook_url: Direct webhook URL (if provided, sends directly)
+            webhook_id: Optional specific webhook ID
+            user_id: Optional user ID to filter webhooks
+        
+        Returns:
+            Trigger result
+        """
+        # If direct webhook URL provided, send directly
+        if webhook_url:
+            webhook_payload = {
+                "event": event_type,
+                "timestamp": datetime.utcnow().isoformat(),
+                "data": payload
+            }
+            
+            headers = {
+                "Content-Type": "application/json",
+                "User-Agent": "AI-Study-Companion-Webhook/1.0"
+            }
+            
+            try:
+                response = requests.post(
+                    webhook_url,
+                    json=webhook_payload,
+                    headers=headers,
+                    timeout=10
+                )
+                return {
+                    "success": response.status_code < 400,
+                    "http_status": response.status_code,
+                    "url": webhook_url
+                }
+            except Exception as e:
+                logger.error(f"Direct webhook delivery error: {str(e)}")
+                return {
+                    "success": False,
+                    "error": str(e),
+                    "url": webhook_url
+                }
+        
+        # Otherwise, use registered webhooks
+        return self.trigger_registered_webhooks(event_type, payload, webhook_id, user_id)
+    
     def _generate_signature(self, payload: str, secret: str) -> str:
         """Generate HMAC signature for webhook"""
         return hmac.new(
