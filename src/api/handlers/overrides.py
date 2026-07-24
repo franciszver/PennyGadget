@@ -14,11 +14,11 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session as DBSession
 
 from src.api.middleware.auth import get_current_user, require_role
+from src.api.middleware.authz import assert_can_access_student
 from src.config.database import get_db
 from src.models.override import Override
 from src.models.practice import PracticeAssignment
 from src.models.summary import Summary
-from src.models.user import User
 
 router = APIRouter(prefix="/overrides", tags=["overrides"])
 
@@ -44,10 +44,10 @@ async def create_override(
 
     Called by Rails app when tutor overrides AI
     """
-    # Verify tutor
-    tutor = db.query(User).filter(User.id == request.tutor_id).first()
-    if not tutor or tutor.role not in ["tutor", "admin"]:
-        raise HTTPException(status_code=403, detail="Only tutors can create overrides")
+    # Caller must be the student's assigned tutor (or admin) - the
+    # authenticated caller's id, not the body-supplied tutor_id, is what
+    # gets persisted below.
+    db_user = assert_can_access_student(db, current_user, request.student_id)
 
     # Get the item being overridden
     original_content = {}
@@ -103,7 +103,7 @@ async def create_override(
     # Create override record
     override = Override(
         id=uuid.uuid4(),
-        tutor_id=uuid.UUID(request.tutor_id),
+        tutor_id=db_user.id,
         student_id=uuid.UUID(request.student_id),
         override_type=request.override_type,
         action=request.action,
@@ -132,7 +132,7 @@ async def create_override(
         "success": True,
         "data": {
             "override_id": str(override.id),
-            "tutor_id": request.tutor_id,
+            "tutor_id": str(override.tutor_id),
             "student_id": request.student_id,
             "override_type": request.override_type,
             "action": request.action,
@@ -153,6 +153,8 @@ async def get_overrides(
     """
     Get all overrides for a student (tutor view)
     """
+    assert_can_access_student(db, current_user, student_id)
+
     overrides = (
         db.query(Override)
         .filter(Override.student_id == student_id)
