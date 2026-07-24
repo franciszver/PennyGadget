@@ -450,12 +450,13 @@ async def complete_practice(
     try:
         item_uuid = uuid.UUID(item_id)
     except (ValueError, TypeError):
-        item_uuid = None
+        raise HTTPException(
+            status_code=404,
+            detail=f"Practice assignment not found with item_id: {item_id}",
+        )
 
     assignment = (
         db.query(PracticeAssignment).filter(PracticeAssignment.id == item_uuid).first()
-        if item_uuid
-        else None
     )
 
     if not assignment:

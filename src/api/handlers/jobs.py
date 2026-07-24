@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from src.api.middleware.auth import get_current_user
 from src.api.middleware.authz import assert_can_access_student
-from src.config.database import get_db
+from src.config.database import SessionLocal, get_db
 from src.models.job import Job, JobStatus
 from src.services.auth import InvalidTokenError, decode_token
 
@@ -73,35 +73,24 @@ async def websocket_job_updates(websocket: WebSocket, job_id: UUID):
     """
     await websocket.accept()
 
-    # Authenticate on connect: token is passed as a query param since
-    # WebSocket handshakes can't carry an Authorization header from browsers.
-    from src.config.database import SessionLocal
-
+    # Authenticate on connect: the token is a query param since WebSocket
+    # handshakes can't carry an Authorization header from browsers. Reject
+    # (close 1008) on a missing/invalid token, an unknown job, or no access.
     db = SessionLocal()
     try:
         token = websocket.query_params.get("token")
-        if not token:
-            await websocket.close(code=1008)
-            return
-
-        try:
-            current_user = decode_token(token)
-        except InvalidTokenError:
-            await websocket.close(code=1008)
-            return
-
-        job = db.query(Job).filter(Job.id == job_id).first()
-        if not job:
-            await websocket.close(code=1008)
-            return
-
-        try:
+        current_user = decode_token(token) if token else None
+        job = db.query(Job).filter(Job.id == job_id).first() if current_user else None
+        if job is not None:
             assert_can_access_student(db, current_user, job.student_id or job.user_id)
-        except HTTPException:
-            await websocket.close(code=1008)
-            return
+    except (InvalidTokenError, HTTPException):
+        job = None
     finally:
         db.close()
+
+    if job is None:
+        await websocket.close(code=1008)
+        return
 
     # Add to active connections
     if job_id not in active_connections:
@@ -112,8 +101,6 @@ async def websocket_job_updates(websocket: WebSocket, job_id: UUID):
 
     try:
         # Get initial job state
-        from src.config.database import SessionLocal
-
         db = SessionLocal()
         try:
             job = db.query(Job).filter(Job.id == job_id).first()
