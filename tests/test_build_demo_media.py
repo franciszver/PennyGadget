@@ -5,7 +5,9 @@ Validates the screenshots -> mp4/gif pipeline against synthetic frames
 session. See scripts/build_demo_media.py and _docs/DEMO-script.md.
 """
 
+import subprocess
 import sys
+import wave
 from pathlib import Path
 
 import pytest
@@ -13,11 +15,26 @@ import pytest
 pytest.importorskip("PIL", reason="demo tooling dep (Pillow) not installed")
 pytest.importorskip("imageio_ffmpeg", reason="demo tooling dep not installed")
 
+import imageio_ffmpeg
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-from build_demo_media import build_demo_media, load_frame_paths  # noqa: E402
+import build_demo_media as bdm  # noqa: E402
+from _demo_audio import synth_music  # noqa: E402
+from build_demo_media import (  # noqa: E402
+    apply_caption,
+    build_demo_media,
+    load_frame_paths,
+)
+
+
+def _probe_has_audio(path):
+    ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+    result = subprocess.run(
+        [ffmpeg_exe, "-i", str(path)], capture_output=True, text=True
+    )
+    return "Audio:" in result.stderr
 
 
 def _make_frames(tmp_path, count=3, size=(1280, 720)):
@@ -123,3 +140,94 @@ def test_load_frame_paths_empty_dir_raises(tmp_path):
     empty_dir.mkdir()
     with pytest.raises(FileNotFoundError):
         load_frame_paths(empty_dir)
+
+
+# --- Captions -----------------------------------------------------------
+
+
+def test_apply_caption_changes_bottom_band_pixels():
+    img = Image.new("RGB", (400, 300), (10, 20, 30))
+    captioned = apply_caption(img, "Hello caption")
+
+    assert captioned.size == img.size
+    assert captioned.getpixel((200, 290)) != img.getpixel((200, 290))
+
+
+def test_apply_caption_no_caption_is_noop():
+    img = Image.new("RGB", (400, 300), (10, 20, 30))
+    out = apply_caption(img, None)
+    assert list(out.getdata()) == list(img.getdata())
+
+
+def test_load_font_falls_back_to_default_when_no_font_files_found(monkeypatch):
+    monkeypatch.setattr(bdm, "_CAPTION_FONT_PATHS", ("Z:/does-not-exist.ttf",))
+    font = bdm._load_font(20)
+    assert font is not None
+
+
+def test_build_demo_media_with_captions_overlays_bar_on_matching_frame(tmp_path):
+    frames_dir = _make_frames(tmp_path, count=3)
+    captions = {"00-frame.png": "Caption One"}
+    out_dir = tmp_path / "out"
+
+    mp4_path, gif_path = build_demo_media(
+        frames_dir,
+        out_dir,
+        seconds_per_frame=0.2,
+        fps=10,
+        gif_width=400,
+        captions=captions,
+    )
+
+    assert mp4_path.exists()
+    with Image.open(gif_path) as gif:
+        assert gif.n_frames == 3
+        gif.seek(0)
+        captioned_frame = gif.convert("RGB")
+        bottom_pixel = captioned_frame.getpixel(
+            (captioned_frame.width // 2, captioned_frame.height - 5)
+        )
+        assert bottom_pixel != (200, 0, 0)  # darkened by the caption bar
+
+        gif.seek(1)
+        uncaptioned_frame = gif.convert("RGB")
+        bottom_pixel_2 = uncaptioned_frame.getpixel(
+            (uncaptioned_frame.width // 2, uncaptioned_frame.height - 5)
+        )
+        assert bottom_pixel_2 == (0, 200, 0)  # untouched, no caption for this frame
+
+
+# --- Music / audio mux ---------------------------------------------------
+
+
+def test_synth_music_writes_valid_wav(tmp_path):
+    out_path = tmp_path / "music.wav"
+    synth_music(1.0, out_path)
+
+    assert out_path.exists()
+    with wave.open(str(out_path), "rb") as w:
+        assert w.getframerate() == 44100
+        assert w.getsampwidth() == 2
+        assert w.getnframes() > 0
+
+
+def test_build_demo_media_with_music_has_audio_stream(tmp_path):
+    frames_dir = _make_frames(tmp_path, count=3)
+    out_dir = tmp_path / "out"
+
+    mp4_path, _gif_path = build_demo_media(
+        frames_dir, out_dir, seconds_per_frame=0.2, fps=10, gif_width=400, music=True
+    )
+
+    assert _probe_has_audio(mp4_path)
+
+
+def test_build_demo_media_without_music_has_no_audio_stream(tmp_path):
+    frames_dir = _make_frames(tmp_path, count=3)
+    out_dir = tmp_path / "out"
+
+    mp4_path, _gif_path = build_demo_media(
+        frames_dir, out_dir, seconds_per_frame=0.2, fps=10, gif_width=400, music=False
+    )
+
+    assert not _probe_has_audio(mp4_path)
