@@ -32,10 +32,16 @@ def load_env_file(env_file):
     return env_vars
 
 def get_db_connection_string(env_vars=None):
-    """Build database connection string from environment variables"""
+    """Build database connection string from environment variables. Prefers DATABASE_URL for Neon (sslmode support)."""
     if env_vars is None:
         env_vars = {}
-    
+
+    database_url = env_vars.get('DATABASE_URL') or os.getenv('DATABASE_URL')
+    if database_url:
+        if database_url.startswith('postgres://'):
+            database_url = 'postgresql://' + database_url[len('postgres://'):]
+        return database_url
+
     db_host = env_vars.get('DB_HOST') or os.getenv('DB_HOST', 'localhost')
     db_port = env_vars.get('DB_PORT') or os.getenv('DB_PORT', '5432')
     db_name = env_vars.get('DB_NAME') or os.getenv('DB_NAME', 'elevareai')
@@ -46,6 +52,10 @@ def get_db_connection_string(env_vars=None):
 
 def create_database_if_not_exists(db_host, db_port, db_user, db_password, db_name):
     """Create database if it doesn't exist"""
+    # NOTE: connects with raw DB_* params and carries no sslmode/DSN query
+    # params. This is fine for local Postgres but should be skipped (via
+    # --skip-create-db) for managed DBs like Neon, where the database
+    # already exists and connections should go through the DSN instead.
     try:
         # Connect to postgres database to create new database
         conn = psycopg2.connect(
@@ -77,16 +87,11 @@ def create_database_if_not_exists(db_host, db_port, db_user, db_password, db_nam
     except Exception as e:
         print(f"  [WARNING] Could not create database (may already exist): {e}")
 
-def run_migration(engine, migration_file):
-    """Run a SQL migration file using psycopg2 for better SQL handling"""
-    import psycopg2
-    from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-    
-    with open(migration_file, 'r', encoding='utf-8') as f:
-        sql = f.read()
-    
-    # Get connection string from engine
-    url = engine.url
+def _psycopg2_params_from_url(url):
+    """Build psycopg2.connect() kwargs from a SQLAlchemy URL, including the
+    DSN's query-string params (e.g. sslmode, channel_binding) so a Neon DSN's
+    SSL requirements are honored explicitly rather than left to psycopg2's
+    default of sslmode=prefer."""
     conn_params = {
         'host': url.host,
         'port': url.port or 5432,
@@ -94,7 +99,24 @@ def run_migration(engine, migration_file):
         'user': url.username,
         'password': url.password
     }
-    
+    # SQLAlchemy's url.query maps repeated keys to tuples; take the last value
+    conn_params.update(
+        {k: (v[-1] if isinstance(v, tuple) else v) for k, v in url.query.items()}
+    )
+    return conn_params
+
+def run_migration(engine, migration_file):
+    """Run a SQL migration file using psycopg2 for better SQL handling"""
+    import psycopg2
+    from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
+    with open(migration_file, 'r', encoding='utf-8') as f:
+        sql = f.read()
+
+    # Get connection string from engine
+    url = engine.url
+    conn_params = _psycopg2_params_from_url(url)
+
     try:
         # Use psycopg2 directly - it handles multi-statement SQL better
         conn = psycopg2.connect(**conn_params)

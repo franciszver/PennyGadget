@@ -1,13 +1,19 @@
 # render.yaml — Render Blueprint for ElevareAI
 #
-# Deploys three resources:
-#   1. elevareai-db        — free Postgres instance
-#   2. elevareai-api       — FastAPI backend (Python web service)
-#   3. elevareai-frontend  — React/Vite frontend (static site)
+# Deploys two resources:
+#   1. elevareai-api       — FastAPI backend (Python web service)
+#   2. elevareai-frontend  — React/Vite frontend (static site)
+#
+# Database: Postgres is hosted on Neon.tech (not Render) as of the #50
+# migration. DATABASE_URL is set manually in the Render dashboard (see below).
 #
 # ---------------------------------------------------------------------------
 # MANUAL STEPS REQUIRED AFTER "New Blueprint" DEPLOY (cannot be automated):
 #   - elevareai-api: OPENROUTER_API_KEY  -> set in Render dashboard (secret)
+#   - elevareai-api: DATABASE_URL        -> set in Render dashboard (secret)
+#     to the Neon POOLED connection string with ?sslmode=require, e.g.
+#     postgresql://USER:PASSWORD@ep-xxx-pooler.REGION.aws.neon.tech/DB?sslmode=require
+#     Never commit the actual value. See _docs/RUNBOOK-neon-migration.md.
 #   - elevareai-api: DEMO_PASSWORD       -> set in Render dashboard (secret,
 #     only needed if/when you run the demo-account seed script; harmless to
 #     set even if unused)
@@ -25,17 +31,15 @@
 # FREE TIER NOTES:
 #   - Free web services spin down after ~15 minutes of inactivity; the next
 #     request will incur a cold-start delay (up to ~1 minute).
-#   - Free Postgres databases on Render expire 30 days after creation and
-#     are deleted (not just suspended). Before expiry, upgrade the plan or
-#     back up/migrate data. See the deployment runbook in the README for the
-#     recovery/reseed procedure.
+#   - Postgres is on Neon's free tier, not Render's: the Render-Postgres
+#     30-day-expiry issue this file used to warn about no longer applies.
+#     Neon's free tier is persistent (no expiry) but autosuspends the
+#     compute endpoint after a period of inactivity; the first query after
+#     autosuspend incurs a cold-start delay (roughly half a second per
+#     Neon's docs), which the app's pool_pre_ping=True setting absorbs by
+#     transparently retrying/replacing a stale pooled connection rather than
+#     surfacing an error.
 # ---------------------------------------------------------------------------
-
-databases:
-  - name: elevareai-db
-    plan: free
-    databaseName: elevareai
-    user: elevareai
 
 services:
   # ---------------------------------------------------------------------
@@ -49,15 +53,17 @@ services:
     startCommand: "uvicorn src.api.main:app --host 0.0.0.0 --port $PORT"
     healthCheckPath: /health
     envVars:
-      # Database connection — Render's Blueprint spec only supports
-      # connectionString/connectionPoolString/user/password/database for
-      # fromDatabase (not host/port). The app reads DATABASE_URL verbatim
-      # via src/config/settings.py get_database_url(), normalizing the
-      # postgres:// scheme Render uses to postgresql:// for SQLAlchemy 2.x.
+      # Database connection — Postgres is hosted on Neon.tech, not Render,
+      # so this is a manual secret rather than a `fromDatabase:` binding.
+      # Set in the Render dashboard to the Neon POOLED connection string
+      # with ?sslmode=require, e.g.
+      # postgresql://USER:PASSWORD@ep-xxx-pooler.REGION.aws.neon.tech/DB?sslmode=require
+      # Never commit the actual value. The app reads DATABASE_URL verbatim
+      # via src/config/settings.py get_database_url(), normalizing only the
+      # postgres:// scheme to postgresql:// for SQLAlchemy 2.x; sslmode and
+      # the pooler host pass through unchanged.
       - key: DATABASE_URL
-        fromDatabase:
-          name: elevareai-db
-          property: connectionString
+        sync: false
 
       # OpenRouter (LLM provider) — API key must be entered manually in the
       # Render dashboard after the first deploy; it is never committed here.

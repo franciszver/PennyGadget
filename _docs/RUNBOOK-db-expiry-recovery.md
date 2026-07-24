@@ -1,5 +1,8 @@
 # Database Expiry Recovery Runbook
 
+> If migrated to Neon (#50), this Render-expiry recovery no longer applies;
+> see `RUNBOOK-neon-migration.md`.
+
 **Scope:** Render free-tier PostgreSQL databases expire 30 days after creation. This runbook restores a demo-ready database end-to-end.
 
 ## When to Use
