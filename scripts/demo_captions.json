@@ -1,0 +1,8 @@
+{
+  "01-login.png": "Sign in — self-hosted JWT auth",
+  "02-dashboard.png": "Dashboard — gentle nudges & progress at a glance",
+  "03-qa-math.png": "AI Q&A — real math rendering (KaTeX) + confidence",
+  "05-practice.png": "Adaptive practice — AI-generated questions by subject",
+  "07-goals.png": "Goals — Elo-rated mastery tracking",
+  "08-progress.png": "Progress — completion, streaks & smart suggestions"
+}
