@@ -854,6 +854,23 @@ def seed_overrides(db, tutors: List[User], summaries: List[Summary]) -> List[Ove
 # ============================================================================
 
 
+def _print_summary(accounts: List[Dict[str, Any]]) -> None:
+    """Print demo account summary without exposing the password value.
+
+    Password is reference by env-var name, not value, to avoid clear-text logging.
+    """
+    print()
+    print("=" * 60)
+    print("[SUCCESS] Demo data seeding complete!")
+    print("=" * 60)
+    print()
+    print("Demo login credentials:")
+    for account in accounts:
+        print(f"  {account['role']:<8} {account['email']}")
+    print("\n  Password for all demo accounts: set via the DEMO_PASSWORD env var (see .env / README).")
+    print()
+
+
 def main() -> None:
     print("=" * 60)
     print("AI Study Companion - Demo Data Seeder")
@@ -916,15 +933,7 @@ def main() -> None:
     finally:
         db.close()
 
-    print()
-    print("=" * 60)
-    print("[SUCCESS] Demo data seeding complete!")
-    print("=" * 60)
-    print()
-    print("Demo login credentials:")
-    for account in DEMO_ACCOUNTS:
-        print(f"  {account['role']:<8} {account['email']:<20} {DEMO_PASSWORD}")
-    print()
+    _print_summary(DEMO_ACCOUNTS)
 
 
 if __name__ == "__main__":
