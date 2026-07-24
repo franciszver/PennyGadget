@@ -69,9 +69,17 @@ def build_mp4(frame_paths, out_path, seconds_per_frame, fps):
 
 
 def build_gif(frame_paths, out_path, seconds_per_frame, gif_width):
+    first = Image.open(frame_paths[0]).convert("RGB")
+    canvas_width = first.width
+    canvas_height = first.height
+
     frames = []
     for path in frame_paths:
         img = Image.open(path).convert("RGB")
+        # Normalize to canvas size first (like build_mp4)
+        if img.size != (canvas_width, canvas_height):
+            img = img.resize((canvas_width, canvas_height))
+        # Then downscale by gif_width
         if gif_width and img.width > gif_width:
             ratio = gif_width / img.width
             img = img.resize((gif_width, max(1, round(img.height * ratio))))

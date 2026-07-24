@@ -22,7 +22,9 @@ from typing import Any, Dict, List
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from scripts.demo_auth import DEMO_PASSWORD  # noqa: E402
 from src.config.database import SessionLocal, engine  # noqa: E402
+from src.config.settings import settings  # noqa: E402
 from src.models import (  # noqa: E402
     Goal,
     Nudge,
@@ -33,8 +35,6 @@ from src.models import (  # noqa: E402
 from src.models import Session as TutoringSession  # noqa: E402
 from src.models import Subject, Summary, User  # noqa: E402
 from src.services.auth import hash_password  # noqa: E402
-from src.config.settings import settings  # noqa: E402
-from scripts.demo_auth import DEMO_PASSWORD  # noqa: E402
 
 # Silence verbose SQL echo (enabled globally in development) for this script's output
 engine.echo = False
@@ -313,9 +313,7 @@ def run_migrations() -> None:
 def seed_headline_accounts(db) -> Dict[str, User]:
     """Create the 3 known-credential demo accounts used for live demos."""
     if not settings.demo_password:
-        raise SystemExit(
-            "DEMO_PASSWORD not set — add it to .env (see README)"
-        )
+        raise SystemExit("DEMO_PASSWORD not set — add it to .env (see README)")
     accounts = {}
     for account in DEMO_ACCOUNTS:
         user, created = get_or_create_user(

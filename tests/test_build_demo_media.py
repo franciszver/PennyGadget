@@ -9,6 +9,10 @@ import sys
 from pathlib import Path
 
 import pytest
+
+pytest.importorskip("PIL", reason="demo tooling dep (Pillow) not installed")
+pytest.importorskip("imageio_ffmpeg", reason="demo tooling dep not installed")
+
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
@@ -37,6 +41,18 @@ def test_build_demo_media_produces_mp4_and_gif(tmp_path):
     assert mp4_path.exists()
     assert mp4_path.stat().st_size > 0
 
+    # Verify mp4 is decodable by reading metadata
+    import imageio_ffmpeg
+
+    reader = imageio_ffmpeg.read_frames(str(mp4_path))
+    try:
+        metadata = next(iter(reader))
+        assert isinstance(metadata, dict)
+        assert metadata.get("source_size") is not None
+        assert metadata.get("fps") is not None
+    finally:
+        reader.close()
+
     assert gif_path.exists()
     assert gif_path.stat().st_size > 0
 
@@ -55,8 +71,46 @@ def test_build_demo_media_handles_odd_dimensions(tmp_path):
 
     assert mp4_path.exists()
     assert mp4_path.stat().st_size > 0
+
+    # Verify mp4 is decodable by reading metadata
+    import imageio_ffmpeg
+
+    reader = imageio_ffmpeg.read_frames(str(mp4_path))
+    try:
+        metadata = next(iter(reader))
+        assert isinstance(metadata, dict)
+        assert metadata.get("source_size") is not None
+        assert metadata.get("fps") is not None
+    finally:
+        reader.close()
+
     assert gif_path.exists()
     assert gif_path.stat().st_size > 0
+
+
+def test_build_demo_media_handles_mismatched_frame_sizes(tmp_path):
+    """Test that gif normalizes frames to common canvas size before downscaling."""
+    frames_dir = tmp_path / "frames"
+    frames_dir.mkdir()
+    # Create two frames with different sizes
+    img1 = Image.new("RGB", (1280, 720), (200, 0, 0))
+    img1.save(frames_dir / "00-frame.png")
+    img2 = Image.new("RGB", (1000, 700), (0, 200, 0))
+    img2.save(frames_dir / "01-frame.png")
+
+    out_dir = tmp_path / "out"
+    mp4_path, gif_path = build_demo_media(
+        frames_dir, out_dir, seconds_per_frame=0.2, fps=10, gif_width=400
+    )
+
+    # Verify gif builds successfully with normalized frames
+    with Image.open(gif_path) as gif:
+        assert gif.is_animated
+        assert gif.n_frames == 2
+        # All frames should have the same canvas size (first frame's dims, downscaled)
+        for frame_idx in range(gif.n_frames):
+            gif.seek(frame_idx)
+            assert gif.width == 400  # downscaled to gif_width
 
 
 def test_load_frame_paths_missing_dir_raises(tmp_path):

@@ -4,16 +4,19 @@ Comprehensive Demo Account Verification
 Tests each demo account according to DEMO_USER_GUIDE.md specifications
 """
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import requests
 import json
+
+import requests
 from sqlalchemy.orm import Session
+
+from scripts.demo_auth import auth_headers, login
 from src.config.database import get_db_session
 from src.models.user import User
-from scripts.demo_auth import login, auth_headers
 
 BASE_URL = "http://localhost:8000"
 
@@ -106,23 +109,24 @@ def test_progress_api(email: str, user_id: str, token: str) -> dict:
 
         if response.status_code != 200:
             results["passed"] = False
-            results["issues"].append(f"API returned status {response.status_code}: {response.text[:200]}")
+            results["issues"].append(
+                f"API returned status {response.status_code}: {response.text[:200]}"
+            )
             return results
 
         data = response.json()
         if not data.get("success"):
             results["passed"] = False
-            results["issues"].append(f"API returned success=false: {data.get('error', 'Unknown error')}")
+            results["issues"].append(
+                f"API returned success=false: {data.get('error', 'Unknown error')}"
+            )
             return results
 
         progress_data = data.get("data", {})
         goals = progress_data.get("goals", [])
         suggestions = progress_data.get("suggestions", [])
 
-        results["data"] = {
-            "goals": goals,
-            "suggestions": suggestions
-        }
+        results["data"] = {"goals": goals, "suggestions": suggestions}
 
     except requests.exceptions.ConnectionError:
         results["passed"] = False
@@ -143,12 +147,14 @@ def test_nudges_api(email: str, user_id: str, token: str) -> dict:
     try:
         url = f"{BASE_URL}/api/v1/nudges/users/{user_id}"
         response = requests.get(url, headers=headers, timeout=10)
-        
+
         if response.status_code != 200:
             results["passed"] = False
-            results["issues"].append(f"Nudges API returned status {response.status_code}")
+            results["issues"].append(
+                f"Nudges API returned status {response.status_code}"
+            )
             return results
-        
+
         data = response.json()
         nudges = data.get("data", {}).get("nudges", [])
 
@@ -173,7 +179,9 @@ def test_qa_api(email: str, user_id: str, token: str) -> dict:
         response = requests.get(url, headers=headers, timeout=10)
 
         if response.status_code != 200:
-            results["issues"].append(f"Q&A history API returned status {response.status_code} (may be OK if no history)")
+            results["issues"].append(
+                f"Q&A history API returned status {response.status_code} (may be OK if no history)"
+            )
             return results
 
         data = response.json()
@@ -195,7 +203,7 @@ def main():
     print("Testing all accounts according to DEMO_USER_GUIDE.md")
     print("=" * 80)
     print()
-    
+
     # Check backend
     print("Checking backend status...")
     if not test_backend():
@@ -205,17 +213,17 @@ def main():
         return
     print("[OK] Backend is running")
     print()
-    
+
     all_passed = True
     results_summary = []
-    
+
     # Test each demo account
     for email, config in DEMO_ACCOUNTS.items():
         print("=" * 80)
         print(f"Testing: {email}")
         print(f"Scenario: {config['scenario']}")
         print("=" * 80)
-        
+
         # Get user ID
         user_id = get_user_id_from_db(email)
         if not user_id:
@@ -223,9 +231,11 @@ def main():
             print("  Run: python scripts/create_demo_users.py")
             print()
             all_passed = False
-            results_summary.append({"email": email, "status": "FAIL", "reason": "User not found"})
+            results_summary.append(
+                {"email": email, "status": "FAIL", "reason": "User not found"}
+            )
             continue
-        
+
         print(f"[OK] User found: {user_id}")
 
         # Verify database data
@@ -270,7 +280,9 @@ def main():
                 if progress_results["data"].get("goals"):
                     print(f"      Goals: {len(progress_results['data']['goals'])}")
                 if progress_results["data"].get("suggestions"):
-                    print(f"      Suggestions: {len(progress_results['data']['suggestions'])}")
+                    print(
+                        f"      Suggestions: {len(progress_results['data']['suggestions'])}"
+                    )
             else:
                 print("   [FAIL] Progress API issues:")
                 for issue in progress_results["issues"]:
@@ -296,22 +308,26 @@ def main():
             if qa_results["passed"]:
                 print("   [OK] Q&A API working")
                 if qa_results["data"].get("history"):
-                    print(f"      Conversation history: {len(qa_results['data']['history'])} items")
+                    print(
+                        f"      Conversation history: {len(qa_results['data']['history'])} items"
+                    )
             else:
                 print("   [FAIL] Q&A API issues:")
                 for issue in qa_results["issues"]:
                     print(f"      - {issue}")
         else:
-            print(f"\n3-5. Skipping progress/nudges/Q&A checks (role={role}, not a student)")
+            print(
+                f"\n3-5. Skipping progress/nudges/Q&A checks (role={role}, not a student)"
+            )
 
         # Summary for this account
         account_passed = (
-            db_results["passed"] and
-            login_results["passed"] and
-            progress_results["passed"] and
-            nudges_results["passed"]
+            db_results["passed"]
+            and login_results["passed"]
+            and progress_results["passed"]
+            and nudges_results["passed"]
         )
-        
+
         if account_passed:
             print(f"\n[PASS] {email} - All tests passed")
             results_summary.append({"email": email, "status": "PASS"})
@@ -319,15 +335,15 @@ def main():
             print(f"\n[FAIL] {email} - Some tests failed")
             results_summary.append({"email": email, "status": "FAIL"})
             all_passed = False
-        
+
         print()
-    
+
     # Final summary
     print("=" * 80)
     print("VERIFICATION SUMMARY")
     print("=" * 80)
     print()
-    
+
     for result in results_summary:
         status = result["status"]
         email = result["email"]
@@ -335,7 +351,7 @@ def main():
             print(f"[PASS] {email}")
         else:
             print(f"[FAIL] {email}: {result.get('reason', 'See details above')}")
-    
+
     print()
     print("=" * 80)
     if all_passed:
@@ -348,7 +364,9 @@ def main():
     print()
     print("Next steps:")
     print("  1. If accounts are missing, run: python scripts/create_demo_users.py")
-    print("  2. If backend is not running, start it: python -m uvicorn src.api.main:app --reload")
+    print(
+        "  2. If backend is not running, start it: python -m uvicorn src.api.main:app --reload"
+    )
     print("  3. Test frontend login with each account")
     print("  4. See DEMO_USER_GUIDE.md for demo instructions")
     print()
@@ -356,4 +374,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
