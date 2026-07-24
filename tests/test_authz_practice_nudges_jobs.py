@@ -417,14 +417,13 @@ class TestJobsGetAuthz:
 class TestJobsWebsocketAuthz:
     """WebSocket /api/v1/jobs/{job_id}/ws
 
-    Auth-on-connect only needs to be proven for the reject paths here: the
-    handler's DB access for the (pre-existing) streaming/polling logic goes
-    through src.config.database.SessionLocal() directly rather than the
-    get_db dependency, so it bypasses the client fixture's SQLite
-    dependency-override entirely and talks to whatever real DATABASE_URL is
-    configured. That's an existing pattern this task didn't touch and isn't
-    reachable from this in-memory test harness, so per the task brief we
-    only assert the reject path here.
+    The handler's DB access goes through src.config.database.SessionLocal()
+    directly rather than the get_db dependency, so it bypasses the client
+    fixture's SQLite dependency-override by default. The reject-path tests
+    below don't need DB access to reach a real job row (no token / wrong
+    user never gets past the auth check), so they work unmodified. The
+    accept-path test monkeypatches SessionLocal to close that gap - see its
+    docstring.
     """
 
     def _make_job(self, db_session, student, status="pending"):
@@ -461,3 +460,34 @@ class TestJobsWebsocketAuthz:
                 ws.receive_json()
 
         assert exc_info.value.code == 1008
+
+    def test_owner_token_connection_is_accepted(self, client, db_session, monkeypatch):
+        """The owner-accept path bypasses the TestClient's SQLite dependency
+        override because the handler opens src.config.database.SessionLocal()
+        directly instead of using the get_db dependency. Point that at the
+        same in-memory SQLite engine the client/db_session fixtures use (via
+        tests.conftest.TestingSessionLocal, sharing the fixtures' StaticPool
+        connection) so the handler's auth check and initial-state query hit
+        the test data instead of a real DATABASE_URL.
+        """
+        from tests.conftest import TestingSessionLocal
+
+        monkeypatch.setattr("src.api.handlers.jobs.SessionLocal", TestingSessionLocal)
+
+        owner, owner_headers, attacker, attacker_headers = make_authed_pair(db_session)
+        job = self._make_job(db_session, owner, status="completed")
+        db_session.query(TestJob).filter(TestJob.id == job.id).update(
+            {"result": {"ok": True}}
+        )
+        db_session.commit()
+        owner_token = token_for(owner)
+
+        with client.websocket_connect(
+            f"/api/v1/jobs/{job.id}/ws?token={owner_token}"
+        ) as ws:
+            status_msg = ws.receive_json()
+            assert status_msg["type"] == "status"
+
+            completed_msg = ws.receive_json()
+            assert completed_msg["type"] == "completed"
+            assert completed_msg["result"] == {"ok": True}

@@ -59,6 +59,65 @@ class TestSummariesAuthz:
         assert resp.status_code == 200
 
 
+class TestConversationHistoryAuthz:
+    def test_attacker_returns_403(self, client, db_session):
+        owner, _, _, attacker_headers = make_authed_pair(db_session, role="student")
+
+        resp = client.get(
+            f"/api/v1/enhancements/qa/conversation-history/{owner.id}",
+            headers=attacker_headers,
+        )
+
+        assert resp.status_code == 403
+
+    def test_owner_returns_200(self, client, db_session):
+        owner, owner_headers, _, _ = make_authed_pair(db_session, role="student")
+
+        resp = client.get(
+            f"/api/v1/enhancements/qa/conversation-history/{owner.id}",
+            headers=owner_headers,
+        )
+
+        assert resp.status_code == 200
+
+    def test_tutor_without_assignment_returns_403(self, client, db_session):
+        student = create_user(db_session, "hist-student-a@example.com", role="student")
+        tutor = create_user(db_session, "hist-tutor-a@example.com", role="tutor")
+        tutor_headers = auth_headers(token_for(tutor))
+
+        resp = client.get(
+            f"/api/v1/enhancements/qa/conversation-history/{student.id}",
+            headers=tutor_headers,
+        )
+
+        assert resp.status_code == 403
+
+    def test_tutor_with_assignment_returns_200(self, client, db_session):
+        student = create_user(db_session, "hist-student-b@example.com", role="student")
+        tutor = create_user(db_session, "hist-tutor-b@example.com", role="tutor")
+        _assign(db_session, tutor, student)
+        tutor_headers = auth_headers(token_for(tutor))
+
+        resp = client.get(
+            f"/api/v1/enhancements/qa/conversation-history/{student.id}",
+            headers=tutor_headers,
+        )
+
+        assert resp.status_code == 200
+
+    def test_admin_returns_200(self, client, db_session):
+        student = create_user(db_session, "hist-student-c@example.com", role="student")
+        admin = create_user(db_session, "hist-admin-a@example.com", role="admin")
+        admin_headers = auth_headers(token_for(admin))
+
+        resp = client.get(
+            f"/api/v1/enhancements/qa/conversation-history/{student.id}",
+            headers=admin_headers,
+        )
+
+        assert resp.status_code == 200
+
+
 class TestConversationContextAuthz:
     def test_attacker_returns_403(self, client, db_session):
         owner, _, _, attacker_headers = make_authed_pair(db_session, role="student")
