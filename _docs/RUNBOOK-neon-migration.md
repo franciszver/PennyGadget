@@ -20,8 +20,9 @@ expiry. No application code changes are required -- `get_database_url()` in
 ## GOTCHA -- do not add unknown keys to `.env`
 
 **Do NOT add `NEON_EXTERNAL_DATABASE_URL` (or any other non-schema key) to
-`.env`.** `src/config/settings.py`'s `Settings` uses `extra="forbid"`, so an
-active (uncommented) unknown key crashes the app at startup with a
+`.env`.** `src/config/settings.py`'s `Settings` rejects unknown keys by default
+(pydantic-settings' standard behavior; the app does not set `extra="allow"`),
+so an active (uncommented) unknown key crashes the app at startup with a
 `pydantic_core.ValidationError` (`extra_forbidden`) -- and since the
 seed/migration path (`scripts/seed_demo_data.py` -> `scripts/setup_db.py`)
 and the test suite both import through `src/config/settings.py`, an unknown

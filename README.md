@@ -517,13 +517,15 @@ npm run dev
   curl https://elevareai-api.onrender.com/health
   ```
   Wait for `{"status":"healthy","database":"connected"}` (may take ~50s). Repeat if needed. Then load the frontend at `https://elevareai-frontend.onrender.com` for a smooth demo experience.
-- **Postgres Expiry**: Free databases delete 30 days after creation, regardless of activity — see runbook for recovery procedure
+- **Database on Neon (persistent)**: Previously hosted on Render's free Postgres (which expired 30 days after creation), now migrated to Neon.tech with no expiry. See `_docs/RUNBOOK-neon-migration.md` for setup and `_docs/RUNBOOK-db-expiry-recovery.md` for the legacy recovery procedure if reverting.
 - **AI Latency**: Free OpenRouter model takes ~20s per response
 
 ### Legacy Deployment Paths
 AWS deployment guides (ECS/Cognito/SES) are in `_docs/guides/` for reference only — use Render above for current deployments.
 
 ### Database Recreation (Render Free PostgreSQL)
+
+> **Legacy (pre-Neon):** This procedure describes recreating a Render PostgreSQL database from an External URL and applies only if you revert to Render Postgres or are maintaining a legacy Render-based deployment. The current database is hosted on Neon.tech (persistent, no expiry). See `_docs/RUNBOOK-neon-migration.md` for the current setup, and `_docs/RUNBOOK-db-expiry-recovery.md` if you need the full legacy Render-Postgres recovery procedure.
 
 Render's free PostgreSQL databases are deleted 30 days after creation, regardless of activity. Restore a demo-ready database in ~5 minutes:
 

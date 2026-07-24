@@ -99,7 +99,10 @@ def _psycopg2_params_from_url(url):
         'user': url.username,
         'password': url.password
     }
-    conn_params.update(dict(url.query))
+    # SQLAlchemy's url.query maps repeated keys to tuples; take the last value
+    conn_params.update(
+        {k: (v[-1] if isinstance(v, tuple) else v) for k, v in url.query.items()}
+    )
     return conn_params
 
 def run_migration(engine, migration_file):
