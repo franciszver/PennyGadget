@@ -72,6 +72,44 @@ class TestCreateOverrideAuthz:
         assert practice.overridden is False
         assert practice.ai_question_text == "What is 2+2?"
 
+    def test_assigned_tutor_cannot_override_other_students_target_via_target_id(
+        self, client, db_session
+    ):
+        # Tutor is legitimately assigned to student A (so
+        # assert_can_access_student passes on student_id=A), but the
+        # target_id points at student B's practice assignment. This is the
+        # BOLA the ownership check on the target guards against: the
+        # student_id check alone is not enough because target_id is never
+        # otherwise tied to student_id.
+        tutor = create_user(db_session, "tutor-bola@example.com", role="tutor")
+        student_a = create_user(
+            db_session, "student-ov-bola-a@example.com", role="student"
+        )
+        student_b = create_user(
+            db_session, "student-ov-bola-b@example.com", role="student"
+        )
+        _assign(db_session, tutor, student_a)
+        practice_b = _create_practice(db_session, student_b)
+        token = token_for(tutor)
+
+        resp = client.post(
+            "/api/v1/overrides/",
+            json={
+                "tutor_id": tutor.id,
+                "student_id": student_a.id,
+                "override_type": "practice",
+                "target_id": practice_b.id,
+                "action": "edit",
+                "new_content": {"question": "hacked"},
+            },
+            headers=auth_headers(token),
+        )
+
+        assert resp.status_code == 403
+        db_session.refresh(practice_b)
+        assert practice_b.overridden is False
+        assert practice_b.ai_question_text == "What is 2+2?"
+
     def test_assigned_tutor_success_tutor_id_derived_from_jwt(self, client, db_session):
         # override_type "qa_answer" is used here (rather than "practice" or
         # "summary") to isolate the identity-derivation behavior under test

@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session as DBSession
 
 from src.api.middleware.auth import get_current_user, require_role
-from src.api.middleware.authz import assert_can_access_student
+from src.api.middleware.authz import _normalize_uuid, assert_can_access_student
 from src.config.database import get_db
 from src.models.override import Override
 from src.models.practice import PracticeAssignment
@@ -58,9 +58,15 @@ async def create_override(
     difficulty_level = None
 
     if request.override_type == "summary":
-        summary = db.query(Summary).filter(Summary.id == request.target_id).first()
+        summary = (
+            db.query(Summary).filter(Summary.id == uuid.UUID(request.target_id)).first()
+        )
         if not summary:
             raise HTTPException(status_code=404, detail="Summary not found")
+        # The target must belong to the authorized student; otherwise a tutor
+        # assigned to student A could edit student B's summary via target_id.
+        if _normalize_uuid(summary.student_id) != _normalize_uuid(request.student_id):
+            raise HTTPException(status_code=403, detail="Access denied")
         original_content = {
             "next_steps": summary.next_steps,
             "narrative": summary.narrative,
@@ -78,11 +84,14 @@ async def create_override(
     elif request.override_type == "practice":
         practice = (
             db.query(PracticeAssignment)
-            .filter(PracticeAssignment.id == request.target_id)
+            .filter(PracticeAssignment.id == uuid.UUID(request.target_id))
             .first()
         )
         if not practice:
             raise HTTPException(status_code=404, detail="Practice assignment not found")
+        # The target must belong to the authorized student (see above).
+        if _normalize_uuid(practice.student_id) != _normalize_uuid(request.student_id):
+            raise HTTPException(status_code=403, detail="Access denied")
         original_content = {
             "question": practice.ai_question_text
             or (practice.bank_item.question_text if practice.bank_item else ""),
