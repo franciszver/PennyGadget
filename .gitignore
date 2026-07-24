@@ -138,3 +138,8 @@ scripts/setup_goal_complete_demo.py
 
 # Local-only docs (not committed)
 _docs/local/
+
+# Demo media build output (screenshots -> mp4/gif) - see scripts/build_demo_media.py
+demo-media/
+*.mp4
+*.gif
