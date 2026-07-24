@@ -79,6 +79,7 @@ def load_fixture_records(path: Path) -> List[Dict[str, Any]]:
                     "latency_s": r.get("latency_s", 0.0),
                     "tokens": r.get("tokens"),
                     "finish_reason": r.get("finish_reason"),
+                    "expect": r.get("expect"),
                 }
             )
         return records
@@ -107,6 +108,14 @@ def record_to_case(record: Dict[str, Any]) -> Case:
         expect["out_of_scope"] = bool(raw_input.get("is_out_of_scope", False))
     if surface == "summary" and "session_duration_minutes" in raw_input:
         raw_input.setdefault("duration_minutes", raw_input["session_duration_minutes"])
+    if surface == "guardrail" and record.get("expect"):
+        # Unlike qa/summary above, guardrail_outputs.json's case ids don't
+        # match evals/datasets/guardrails.yaml's ids, so there's nothing to
+        # look up by id - each fixture record instead carries its own
+        # `expect` dict inline (same shape the registry's `_guardrail_*`
+        # adapters already read via evals/graders/registry.py's
+        # "guardrail:" convention), and we pass it through as-is.
+        expect.update(record["expect"])
 
     return Case(
         id=record["id"], surface=surface, input=raw_input, expect=expect or None
