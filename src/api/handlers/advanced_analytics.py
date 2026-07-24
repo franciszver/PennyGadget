@@ -102,7 +102,7 @@ async def get_retention_metrics(
 async def get_engagement_score(
     user_id: str,
     db: DBSession = Depends(get_db),
-    current_user: dict = Depends(require_role(["admin", "tutor"])),
+    current_user: dict = Depends(require_role(["admin", "tutor", "parent"])),
 ):
     """
     Get engagement score for a user

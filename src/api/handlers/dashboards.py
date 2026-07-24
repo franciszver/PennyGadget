@@ -13,8 +13,10 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session as DBSession
 
 from src.api.middleware.auth import get_current_user, require_role
+from src.api.middleware.authz import assert_can_access_student
 from src.config.database import get_db
 from src.models.goal import Goal
+from src.models.parent_student import ParentStudentAssignment
 from src.models.session import Session as SessionModel
 from src.models.summary import Summary
 from src.models.user import User
@@ -30,20 +32,16 @@ router = APIRouter(prefix="/dashboards", tags=["dashboards"])
 async def get_parent_dashboard(
     student_id: UUID,
     db: DBSession = Depends(get_db),
-    # Locked to admin until a parent<->student linkage model exists (#60).
-    current_user: dict = Depends(require_role(["admin"])),
+    # Parent<->student access is relationship-enforced via
+    # assert_can_access_student (#68); links are admin/seed-provisioned.
+    current_user: dict = Depends(require_role(["parent", "admin"])),
 ):
     """
     Get parent dashboard for a specific student
 
     Shows progress and recent activity
     """
-    # Verify user is parent or admin
-    user_sub = current_user.get("sub")
-    db_user = db.query(User).filter(User.cognito_sub == user_sub).first()
-
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
+    db_user = assert_can_access_student(db, current_user, student_id)
 
     # Verify student exists
     student = db.query(User).filter(User.id == student_id).first()
@@ -118,13 +116,15 @@ async def get_parent_dashboard(
 @router.get("/parent/students")
 async def get_parent_students(
     db: DBSession = Depends(get_db),
-    # Locked to admin until a parent<->student linkage model exists (#60).
-    current_user: dict = Depends(require_role(["admin"])),
+    # Parent<->student access is relationship-enforced (#68); links are
+    # admin/seed-provisioned.
+    current_user: dict = Depends(require_role(["parent", "admin"])),
 ):
     """
     Get list of students for parent
 
-    For now, returns all students (in production, would filter by parent-student relationship)
+    Admins see all students. Parents see only students they are linked to
+    via ParentStudentAssignment.
     """
     user_sub = current_user.get("sub")
     db_user = db.query(User).filter(User.cognito_sub == user_sub).first()
@@ -132,8 +132,21 @@ async def get_parent_students(
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Get all students (in production, filter by parent relationship)
-    students = db.query(User).filter(User.role == "student").all()
+    if db_user.role == "admin":
+        students = db.query(User).filter(User.role == "student").all()
+    else:
+        students = (
+            db.query(User)
+            .join(
+                ParentStudentAssignment,
+                ParentStudentAssignment.student_id == User.id,
+            )
+            .filter(
+                ParentStudentAssignment.parent_id == db_user.id,
+                User.role == "student",
+            )
+            .all()
+        )
 
     students_data = [
         {

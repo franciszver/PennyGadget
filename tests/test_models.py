@@ -285,6 +285,38 @@ class TestTutorStudentAssignment(TestBase):
     subject = relationship("TestSubject", backref="tutor_student_assignments")
 
 
+class TestParentStudentAssignment(TestBase):
+    """Test version of ParentStudentAssignment model"""
+
+    __tablename__ = "parent_student_assignments"
+
+    parent_id = Column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    student_id = Column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    status = Column(String(20), default="active")
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    __table_args__ = (PrimaryKeyConstraint("parent_id", "student_id"),)
+
+    parent = relationship(
+        "TestUser", foreign_keys=[parent_id], backref="parent_assignments"
+    )
+    student = relationship(
+        "TestUser", foreign_keys=[student_id], backref="parent_student_assignments"
+    )
+
+
 class TestStudentRating(TestBase):
     """Test version of StudentRating model"""
 

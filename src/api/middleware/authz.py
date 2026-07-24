@@ -7,8 +7,8 @@ this student's data" check. This centralizes that access model:
   - student -> may access only their own student_id
   - tutor   -> may access only students they have a TutorStudentAssignment
                with
-  - parent  -> not handled here (parent routes are locked to admin
-               elsewhere); treated like any other non-owner, i.e. denied
+  - parent  -> may access only students they have a ParentStudentAssignment
+               with (#68); links are admin/seed-provisioned
   - admin   -> may access anything
 """
 
@@ -17,6 +17,7 @@ import uuid
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from src.models.parent_student import ParentStudentAssignment
 from src.models.tutor_student import TutorStudentAssignment
 from src.models.user import User
 
@@ -60,6 +61,18 @@ def assert_can_access_student(
             .filter(
                 TutorStudentAssignment.tutor_id == db_user.id,
                 TutorStudentAssignment.student_id == uuid.UUID(str(target_student_id)),
+            )
+            .first()
+        )
+        if assignment:
+            return db_user
+
+    if db_user.role == "parent":
+        assignment = (
+            db.query(ParentStudentAssignment)
+            .filter(
+                ParentStudentAssignment.parent_id == db_user.id,
+                ParentStudentAssignment.student_id == uuid.UUID(str(target_student_id)),
             )
             .first()
         )

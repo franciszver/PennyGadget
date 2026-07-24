@@ -202,7 +202,16 @@ class TestMessagingThreadsAuthz:
 
 
 class TestDashboardsParentLockedToAdmin:
-    def test_parent_role_returns_403_for_student_dashboard(self, client, db_session):
+    # As of #68, parents may access dashboards.py's parent routes for
+    # students they are linked to via ParentStudentAssignment (admin/seed
+    # provisioned). An UNLINKED parent is still denied - not because the
+    # route is admin-only anymore, but because assert_can_access_student
+    # finds no relationship. See tests/test_authz_parent.py for the
+    # linked-parent coverage.
+
+    def test_unlinked_parent_role_returns_403_for_student_dashboard(
+        self, client, db_session
+    ):
         parent = create_user(db_session, "parent-a@example.com", role="parent")
         student = create_user(db_session, "dash-student-a@example.com", role="student")
         parent_headers = auth_headers(token_for(parent))
@@ -220,17 +229,21 @@ class TestDashboardsParentLockedToAdmin:
     # str(UUID) the route produces) against the same TestUser row - no id
     # format satisfies both, so it 404s/500s under this harness regardless
     # of authz. This is a pre-existing test-harness limitation, not an
-    # access-control bug; require_role(["admin"]) is exercised identically
-    # by test_admin_returns_200_for_students_list below, since both parent
-    # routes share the exact same role dependency.
+    # access-control bug; require_role(["parent", "admin"]) is exercised
+    # identically by test_admin_returns_200_for_students_list below, since
+    # both parent routes share the exact same role dependency.
 
-    def test_parent_role_returns_403_for_students_list(self, client, db_session):
+    def test_unlinked_parent_sees_empty_list_for_students_list(
+        self, client, db_session
+    ):
         parent = create_user(db_session, "parent-b@example.com", role="parent")
+        create_user(db_session, "dash-student-b@example.com", role="student")
         parent_headers = auth_headers(token_for(parent))
 
         resp = client.get("/api/v1/dashboards/parent/students", headers=parent_headers)
 
-        assert resp.status_code == 403
+        assert resp.status_code == 200
+        assert resp.json()["data"]["students"] == []
 
     def test_admin_returns_200_for_students_list(self, client, db_session):
         admin = create_user(db_session, "admin-b@example.com", role="admin")
