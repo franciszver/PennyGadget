@@ -92,3 +92,59 @@ class TestAssertCanAccessStudent:
             )
 
         assert exc_info.value.status_code == 403
+
+    def test_none_target_returns_403_for_student(self, db_session):
+        student = create_user(
+            db_session, "none-target-student@example.com", role="student"
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            assert_can_access_student(db_session, _current_user(student), None)
+
+        assert exc_info.value.status_code == 403
+
+    def test_none_target_returns_403_for_tutor(self, db_session):
+        tutor = create_user(db_session, "none-target-tutor@example.com", role="tutor")
+
+        with pytest.raises(HTTPException) as exc_info:
+            assert_can_access_student(db_session, _current_user(tutor), None)
+
+        assert exc_info.value.status_code == 403
+
+    def test_none_target_returns_403_for_admin(self, db_session):
+        admin = create_user(db_session, "none-target-admin@example.com", role="admin")
+
+        with pytest.raises(HTTPException) as exc_info:
+            assert_can_access_student(db_session, _current_user(admin), None)
+
+        assert exc_info.value.status_code == 403
+
+    def test_malformed_target_returns_403_for_student(self, db_session):
+        student = create_user(
+            db_session, "malformed-target-student@example.com", role="student"
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            assert_can_access_student(db_session, _current_user(student), "abc")
+
+        assert exc_info.value.status_code == 403
+
+    def test_malformed_target_returns_403_for_tutor(self, db_session):
+        tutor = create_user(
+            db_session, "malformed-target-tutor@example.com", role="tutor"
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            assert_can_access_student(db_session, _current_user(tutor), "abc")
+
+        assert exc_info.value.status_code == 403
+
+    def test_malformed_target_returns_403_for_admin(self, db_session):
+        admin = create_user(
+            db_session, "malformed-target-admin@example.com", role="admin"
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            assert_can_access_student(db_session, _current_user(admin), "abc")
+
+        assert exc_info.value.status_code == 403

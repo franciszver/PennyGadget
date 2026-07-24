@@ -26,7 +26,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session as DBSession
 from starlette.concurrency import run_in_threadpool
 
-from src.api.middleware.auth import get_current_user, get_current_user_optional
+from src.api.middleware.auth import get_current_user
 from src.api.middleware.authz import assert_can_access_student
 from src.config.database import get_db
 from src.models.job import Job, JobStatus
@@ -74,7 +74,7 @@ async def assign_practice_async(
     request: AsyncPracticeRequest,
     background_tasks: BackgroundTasks,
     db: DBSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user_optional),
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Assign practice items asynchronously (returns immediately with job ID)
@@ -85,6 +85,8 @@ async def assign_practice_async(
     - Connect via WebSocket to /api/v1/jobs/{job_id}/ws for real-time updates
     - Provide a webhook_url to receive completion notification
     """
+    assert_can_access_student(db, current_user, request.student_id)
+
     job_service = PracticeJobService(db)
 
     # Create job

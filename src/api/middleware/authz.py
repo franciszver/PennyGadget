@@ -40,10 +40,18 @@ def assert_can_access_student(
     if not db_user:
         raise HTTPException(status_code=403, detail="Access denied")
 
+    if target_student_id is None:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    try:
+        normalized_target = _normalize_uuid(target_student_id)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=403, detail="Access denied")
+
     if db_user.role == "admin":
         return db_user
 
-    if _normalize_uuid(db_user.id) == _normalize_uuid(target_student_id):
+    if _normalize_uuid(db_user.id) == normalized_target:
         return db_user
 
     if db_user.role == "tutor":

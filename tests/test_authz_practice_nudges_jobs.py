@@ -87,6 +87,16 @@ class TestPracticeAssignAuthz:
         )
         assert resp.status_code == 403
 
+    def test_malformed_student_id_returns_403(self, client, db_session):
+        subject = _create_subject(db_session)
+        owner, owner_headers, attacker, attacker_headers = make_authed_pair(db_session)
+        resp = client.post(
+            f"/api/v1/practice/assign?student_id=not-a-uuid"
+            f"&subject={subject.name}&num_items=0",
+            headers=owner_headers,
+        )
+        assert resp.status_code == 403
+
     def test_owner_returns_2xx(self, client, db_session):
         subject = _create_subject(db_session)
         owner, owner_headers, attacker, attacker_headers = make_authed_pair(db_session)
@@ -216,6 +226,44 @@ class TestPracticeSummaryAuthz:
             f"&student_id={owner.id}",
             headers=owner_headers,
         )
+        assert resp.status_code < 300
+
+
+class TestPracticeAssignAsyncAuthz:
+    """POST /api/v1/practice/assign/async"""
+
+    def _body(self, student_id):
+        return {
+            "student_id": str(student_id),
+            "subject": "Algebra",
+            "num_items": 5,
+        }
+
+    def test_no_auth_returns_401(self, client, db_session):
+        owner, owner_headers, attacker, attacker_headers = make_authed_pair(db_session)
+        resp = client.post("/api/v1/practice/assign/async", json=self._body(owner.id))
+        assert resp.status_code == 401
+
+    def test_attacker_returns_403(self, client, db_session):
+        owner, owner_headers, attacker, attacker_headers = make_authed_pair(db_session)
+        resp = client.post(
+            "/api/v1/practice/assign/async",
+            json=self._body(owner.id),
+            headers=attacker_headers,
+        )
+        assert resp.status_code == 403
+
+    def test_owner_returns_2xx(self, client, db_session):
+        owner, owner_headers, attacker, attacker_headers = make_authed_pair(db_session)
+        with patch(
+            "src.api.handlers.practice.PracticeJobService.process_job",
+            return_value={"success": True},
+        ):
+            resp = client.post(
+                "/api/v1/practice/assign/async",
+                json=self._body(owner.id),
+                headers=owner_headers,
+            )
         assert resp.status_code < 300
 
 
