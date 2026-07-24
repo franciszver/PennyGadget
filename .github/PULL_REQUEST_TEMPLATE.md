@@ -27,6 +27,7 @@ Brief description of changes
 - [ ] No new warnings generated
 - [ ] Tests added/updated and passing
 - [ ] Dependencies updated (if applicable)
+- [ ] Any route taking a user/student/`*_id` (path, query, or body) calls the object-access helper (`assert_can_access_student`) or is intentionally public
 
 ## Related Issues
 
