@@ -52,6 +52,10 @@ def get_db_connection_string(env_vars=None):
 
 def create_database_if_not_exists(db_host, db_port, db_user, db_password, db_name):
     """Create database if it doesn't exist"""
+    # NOTE: connects with raw DB_* params and carries no sslmode/DSN query
+    # params. This is fine for local Postgres but should be skipped (via
+    # --skip-create-db) for managed DBs like Neon, where the database
+    # already exists and connections should go through the DSN instead.
     try:
         # Connect to postgres database to create new database
         conn = psycopg2.connect(
@@ -83,16 +87,11 @@ def create_database_if_not_exists(db_host, db_port, db_user, db_password, db_nam
     except Exception as e:
         print(f"  [WARNING] Could not create database (may already exist): {e}")
 
-def run_migration(engine, migration_file):
-    """Run a SQL migration file using psycopg2 for better SQL handling"""
-    import psycopg2
-    from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-    
-    with open(migration_file, 'r', encoding='utf-8') as f:
-        sql = f.read()
-    
-    # Get connection string from engine
-    url = engine.url
+def _psycopg2_params_from_url(url):
+    """Build psycopg2.connect() kwargs from a SQLAlchemy URL, including the
+    DSN's query-string params (e.g. sslmode, channel_binding) so a Neon DSN's
+    SSL requirements are honored explicitly rather than left to psycopg2's
+    default of sslmode=prefer."""
     conn_params = {
         'host': url.host,
         'port': url.port or 5432,
@@ -100,7 +99,21 @@ def run_migration(engine, migration_file):
         'user': url.username,
         'password': url.password
     }
-    
+    conn_params.update(dict(url.query))
+    return conn_params
+
+def run_migration(engine, migration_file):
+    """Run a SQL migration file using psycopg2 for better SQL handling"""
+    import psycopg2
+    from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
+    with open(migration_file, 'r', encoding='utf-8') as f:
+        sql = f.read()
+
+    # Get connection string from engine
+    url = engine.url
+    conn_params = _psycopg2_params_from_url(url)
+
     try:
         # Use psycopg2 directly - it handles multi-statement SQL better
         conn = psycopg2.connect(**conn_params)
