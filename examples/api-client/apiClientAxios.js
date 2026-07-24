@@ -23,6 +23,8 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('authToken');
+    // NOTE: The backend does not implement X-API-Key auth (documented but
+    // never built — see _docs/active/API_CONTRACTS.md). This fallback is inert.
     const apiKey = process.env.REACT_APP_API_KEY;
 
     if (token) {

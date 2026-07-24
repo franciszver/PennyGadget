@@ -12,7 +12,7 @@ The AI Study Companion is a **persistent AI agent** that lives between tutoring 
 - **Conversational Q&A**: Answers questions with full conversation context
 - **Smart Suggestions**: Prevents churn by suggesting next learning paths
 - **Proactive Engagement**: Nudges students at risk of churning
-- **Seamless Integration**: RESTful API ready for Rails/React platform
+- **Seamless Integration**: RESTful API used by the React platform (JWT auth); a Rails caller is aspirational and not implemented
 
 ---
 
@@ -35,7 +35,7 @@ All accounts use password: `demo123`
 
 ### **Opening (1 minute)**
 
-> "I'm going to show you the AI Study Companion - a persistent AI agent that lives between tutoring sessions. It remembers previous lessons, assigns adaptive practice, answers questions conversationally, and drives students back to human tutors when needed. Everything integrates seamlessly with our existing Rails/React platform via RESTful APIs."
+> "I'm going to show you the AI Study Companion - a persistent AI agent that lives between tutoring sessions. It remembers previous lessons, assigns adaptive practice, answers questions conversationally, and drives students back to human tutors when needed. Everything integrates seamlessly with our React platform via RESTful APIs."
 
 **Key Points:**
 - Persistent AI companion (not just a chatbot)
@@ -396,18 +396,18 @@ POST /api/v1/goals/{goal_id}/reset
 
 ---
 
-## 🔗 Rails/React Platform Integration
+## 🔗 React Platform Integration
 
 ### **How It Integrates**
 
-The AI Study Companion is built as a **standalone FastAPI service** that integrates with your existing Rails/React platform via RESTful APIs.
+The AI Study Companion is built as a **standalone FastAPI service** that integrates with the React frontend via RESTful APIs, using self-hosted JWT (not AWS Cognito). A Rails backend integration (sections below marked NOT IMPLEMENTED) is aspirational only — there is no Rails app in this codebase.
 
 #### **1. Authentication Integration**
 
 ```javascript
 // React Frontend
-// Uses existing AWS Cognito JWT tokens
-const token = await getCognitoToken(); // Your existing auth
+// Uses self-hosted JWT tokens issued by this service
+const token = getStoredAuthToken(); // Your existing auth
 fetch('https://api.pennygadget.ai/v1/progress/user123', {
   headers: {
     'Authorization': `Bearer ${token}`
@@ -416,15 +416,14 @@ fetch('https://api.pennygadget.ai/v1/progress/user123', {
 ```
 
 **Backend Support:**
-- Accepts AWS Cognito JWT tokens
-- Validates tokens using `python-jose`
+- Issues and validates self-hosted JWT tokens (HS256)
 - Extracts user info from token claims
 - Development mode supports mock tokens for testing
 
-#### **2. Session Summary Integration**
+#### **2. Session Summary Integration (NOT IMPLEMENTED — aspirational, future integration only)**
 
 ```ruby
-# Rails Backend
+# Rails Backend (aspirational, not implemented — no Rails app exists in this codebase)
 # After a tutoring session completes
 def create_session_summary(session)
   response = HTTParty.post(
@@ -449,7 +448,7 @@ def create_session_summary(session)
 end
 ```
 
-**What This Enables:**
+**What This Would Enable (if built):**
 - Automatic AI summaries after each session
 - Summaries stored in AI Companion database
 - Accessible via API for display in React frontend
@@ -554,7 +553,7 @@ async function askQuestion(query) {
 - Follow-up question support
 - Persistent conversation history
 
-#### **6. Webhook Integration (Event-Driven)**
+#### **6. Webhook Integration (Event-Driven) (NOT IMPLEMENTED — aspirational, future integration only)**
 
 ```ruby
 # Rails Backend
@@ -598,7 +597,7 @@ end
 - Automatic updates in Rails app
 - Event history and retry logic
 
-#### **7. LMS Integration (Canvas/Blackboard)**
+#### **7. LMS Integration (Canvas/Blackboard) (NOT IMPLEMENTED — aspirational, future integration only)**
 
 ```ruby
 # Rails Backend
@@ -771,7 +770,7 @@ python scripts/verify_demo_users.py
 6. **Visual Progress Tracking**: Interactive pie chart on dashboard with goal names and completion percentages
 7. **Goal-Focused Practice**: Practice dropdown only shows subjects from goals; auto-creates goals if none exist
 8. **Rich Q&A Formatting**: Markdown rendering for code blocks, lists, headings, and formatted explanations
-9. **Seamless Integration**: RESTful API ready for Rails/React
+9. **Seamless Integration**: RESTful API used by React (JWT auth); Rails is aspirational, not implemented
 10. **Proactive Engagement**: Nudges at-risk students automatically
 11. **Cross-Subject Learning**: Builds comprehensive learning paths
 12. **Math Accuracy**: SymPy for reliable math problem generation
@@ -786,7 +785,7 @@ python scripts/verify_demo_users.py
 All demo accounts are pre-configured and ready. The system demonstrates:
 - ✅ All retention enhancement requirements
 - ✅ Complete feature set
-- ✅ Rails/React integration examples
+- ✅ React integration examples (Rails integration examples are aspirational, not implemented)
 - ✅ Real-world use cases
 
 **Start with the Quick Demo Script (15 minutes) and expand as needed!**

@@ -58,11 +58,6 @@ class Settings(BaseSettings):
         default="http://localhost:8000", description="API base URL"
     )
 
-    # API Keys
-    ai_service_api_key: Optional[str] = Field(
-        default=None, description="Service API key"
-    )
-
     # JWT Authentication
     jwt_secret: str = Field(default="", description="JWT signing secret")
     jwt_expiry_minutes: int = Field(
@@ -124,7 +119,6 @@ class Settings(BaseSettings):
     # ========================================================================
     # External Service URLs
     # ========================================================================
-    rails_app_url: Optional[str] = Field(default=None, description="Rails app URL")
     webhook_secret: Optional[str] = Field(default=None, description="Webhook secret")
 
     # ========================================================================

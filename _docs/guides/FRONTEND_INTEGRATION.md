@@ -20,37 +20,22 @@ npm install axios
 
 ## 🔐 **Authentication**
 
-### **AWS Cognito Integration**
+### **JWT Authentication**
 
-The API uses JWT tokens from AWS Cognito for user authentication.
+All endpoints use self-hosted JWT tokens (not AWS Cognito) for authentication:
 
 ```javascript
-// Get token from Cognito
-import { Auth } from 'aws-amplify';
-
 async function getAuthToken() {
-  try {
-    const session = await Auth.currentSession();
-    return session.getIdToken().getJwtToken();
-  } catch (error) {
-    console.error('Error getting token:', error);
-    return null;
-  }
+  return localStorage.getItem('authToken');
 }
 
 // Store token
 localStorage.setItem('authToken', token);
 ```
 
-### **Service-to-Service Authentication**
+### **Service-to-Service Authentication (NOT IMPLEMENTED)**
 
-For service-to-service requests (e.g., from Rails backend), use API key:
-
-```javascript
-const headers = {
-  'X-API-Key': process.env.REACT_APP_API_KEY,
-};
-```
+There is no `X-API-Key` service-to-service auth in this codebase — it was documented but never implemented, and the backend does not check this header. If a service-to-service integration (e.g. a future Rails backend) is built later, it must use a scoped identity that still passes the object-ownership check (see `_docs/active/API_CONTRACTS.md`, #67/#68).
 
 ---
 
@@ -387,7 +372,6 @@ Create `.env` file:
 
 ```env
 REACT_APP_API_URL=http://localhost:8000/api/v1
-REACT_APP_API_KEY=your-api-key-here
 ```
 
 ---

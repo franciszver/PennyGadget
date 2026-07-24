@@ -1,19 +1,19 @@
 # 🔌 API Contracts
 **Product:** AI Study Companion MVP  
-**Integration:** Rails/React Application  
+**Integration:** React Application  
 **Version:** 1.0.0
 
 ---
 
 ## Overview
 
-This document defines the REST API contracts for integrating the AI Study Companion service with the existing Rails/React platform. All endpoints use JSON for request/response bodies.
+This document defines the REST API contracts for the AI Study Companion service. All endpoints use JSON for request/response bodies. The real, implemented caller is the React frontend. A Rails backend integration is an aspirational future possibility only — it was never built, and the code below that describes it was never implemented.
 
 **Base URL:** `https://api.pennygadget.ai/v1` (or configured environment variable)
 
 **Authentication:**
-- **Service-to-Service:** API Key in `X-API-Key` header
-- **User Requests:** JWT token from AWS Cognito in `Authorization: Bearer <token>` header
+- **All endpoints:** JWT token in `Authorization: Bearer <token>` header (self-hosted JWT, not AWS Cognito)
+- **Not implemented:** The `X-API-Key` service-to-service header described elsewhere in this document was documented from the founding commit but never implemented in code. `settings.ai_service_api_key` has been removed. If a service-to-service integration is built later, it must use a scoped identity that still passes the object-ownership check (see #67/#68).
 
 ---
 
@@ -496,7 +496,9 @@ Get multi-goal progress dashboard data.
 
 ---
 
-## Rails Integration Examples
+## Rails Integration Examples (NOT IMPLEMENTED — aspirational, future integration only)
+
+The Ruby examples below describe a Rails service-to-service caller using an `X-API-Key` header. This was never built: there is no Rails app in this codebase, and the backend does not check `X-API-Key` at all. Kept here only as a sketch of what a future service-to-service integration might look like; any real implementation must use a scoped identity that still passes the object-ownership check (#67/#68), not a shared static API key.
 
 ### Ruby Client Class
 
@@ -687,15 +689,14 @@ export const useAIQuery = () => {
 
 ## Rate Limiting
 
-- **Service-to-Service:** 1000 requests/minute per API key
 - **User Requests:** 100 requests/minute per user
 - **Headers:** `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
 
 ---
 
-## Webhooks (Optional - POST-MVP)
+## Webhooks (Optional - POST-MVP, NOT IMPLEMENTED)
 
-For real-time updates, the service can send webhooks to Rails app:
+Aspirational, not implemented. For real-time updates, the service could in the future send webhooks to a Rails app:
 
 ```
 POST https://your-rails-app.com/webhooks/ai-service
