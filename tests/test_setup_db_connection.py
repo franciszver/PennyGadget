@@ -15,8 +15,7 @@ from scripts.setup_db import get_db_connection_string  # noqa: E402
 def test_uses_database_url_verbatim_when_set(monkeypatch):
     """DATABASE_URL should be returned as-is, preserving sslmode and pooler host."""
     neon_dsn = (
-        "postgresql://u:p@ep-x-pooler.us-east-2.aws.neon.tech/neondb"
-        "?sslmode=require"
+        "postgresql://u:p@ep-x-pooler.us-east-2.aws.neon.tech/neondb" "?sslmode=require"
     )
     monkeypatch.setenv("DATABASE_URL", neon_dsn)
 
@@ -30,16 +29,14 @@ def test_uses_database_url_verbatim_when_set(monkeypatch):
 def test_normalizes_postgres_scheme_to_postgresql(monkeypatch):
     """postgres:// scheme should normalize to postgresql://, query string intact."""
     neon_dsn = (
-        "postgres://u:p@ep-x-pooler.us-east-2.aws.neon.tech/neondb"
-        "?sslmode=require"
+        "postgres://u:p@ep-x-pooler.us-east-2.aws.neon.tech/neondb" "?sslmode=require"
     )
     monkeypatch.setenv("DATABASE_URL", neon_dsn)
 
     result = get_db_connection_string()
 
     assert result == (
-        "postgresql://u:p@ep-x-pooler.us-east-2.aws.neon.tech/neondb"
-        "?sslmode=require"
+        "postgresql://u:p@ep-x-pooler.us-east-2.aws.neon.tech/neondb" "?sslmode=require"
     )
 
 

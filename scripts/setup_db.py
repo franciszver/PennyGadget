@@ -32,10 +32,16 @@ def load_env_file(env_file):
     return env_vars
 
 def get_db_connection_string(env_vars=None):
-    """Build database connection string from environment variables"""
+    """Build database connection string from environment variables. Prefers DATABASE_URL for Neon (sslmode support)."""
     if env_vars is None:
         env_vars = {}
-    
+
+    database_url = env_vars.get('DATABASE_URL') or os.getenv('DATABASE_URL')
+    if database_url:
+        if database_url.startswith('postgres://'):
+            database_url = 'postgresql://' + database_url[len('postgres://'):]
+        return database_url
+
     db_host = env_vars.get('DB_HOST') or os.getenv('DB_HOST', 'localhost')
     db_port = env_vars.get('DB_PORT') or os.getenv('DB_PORT', '5432')
     db_name = env_vars.get('DB_NAME') or os.getenv('DB_NAME', 'elevareai')

@@ -60,22 +60,15 @@ python scripts/seed_demo_data.py
 This runs `scripts/setup_db.py` (schema/migrations) followed by idempotent
 demo-account seeding.
 
-**Nuance -- `DB_*` vs `DATABASE_URL`:** `scripts/setup_db.py` does **not**
-read `DATABASE_URL`. It builds its own connection string from the discrete
-`DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` environment
-variables (see `get_db_connection_string()` in that script), and that
-connection string does not append `sslmode`. `src/config/database.py`
-(used by the rest of the app, including `seed_demo_data.py`'s ORM calls),
-by contrast, goes through `get_database_url()` and honors `DATABASE_URL`
-directly. So to run `setup_db.py` against Neon, set `DB_HOST` /
-`DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` in `.env` by parsing them
-out of the Neon pooled connection string (same approach
-`_docs/RUNBOOK-db-expiry-recovery.md` step 3 uses for Render), in addition
-to setting `DATABASE_URL` for the app itself. This has not been verified
-against real Neon -- if `setup_db.py`'s psycopg2 connection without an
-explicit `sslmode` fails against Neon (Neon enforces SSL server-side),
-that is a real gap to fix at cutover time, not something this branch
-silently patches.
+**`DB_*` vs `DATABASE_URL` (resolved):** `scripts/setup_db.py`'s
+`get_db_connection_string()` now prefers `DATABASE_URL` when set, returning
+it verbatim (aside from normalizing `postgres://` to `postgresql://`), the
+same precedence `src/config/database.py`'s `get_database_url()` uses. So
+with `DATABASE_URL` set to the Neon pooled connection string (including
+`?sslmode=require`), `setup_db.py` connects with that DSN as-is -- no
+separate `DB_*` parsing is needed for this step. `DB_*` remains a fallback
+for local dev when `DATABASE_URL` is unset. See
+`tests/test_setup_db_connection.py` for coverage.
 
 ### 4. Redeploy and verify /health
 
