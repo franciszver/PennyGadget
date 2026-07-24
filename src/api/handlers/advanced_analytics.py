@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session as DBSession
 
 from src.api.middleware.auth import require_role
+from src.api.middleware.authz import assert_can_access_student
 from src.config.database import get_db
 from src.services.analytics.ab_testing import ABTestingFramework
 from src.services.analytics.advanced import AdvancedAnalytics
@@ -101,13 +102,15 @@ async def get_retention_metrics(
 async def get_engagement_score(
     user_id: str,
     db: DBSession = Depends(get_db),
-    current_user: dict = Depends(require_role(["admin", "tutor", "parent"])),
+    current_user: dict = Depends(require_role(["admin", "tutor"])),
 ):
     """
     Get engagement score for a user
 
     Calculates engagement based on sessions, practice, Q&A, and goals
     """
+    assert_can_access_student(db, current_user, user_id)
+
     analytics = AdvancedAnalytics(db)
 
     try:

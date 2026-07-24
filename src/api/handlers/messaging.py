@@ -14,6 +14,7 @@ from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session as DBSession
 
 from src.api.middleware.auth import get_current_user, require_role
+from src.api.middleware.authz import assert_can_access_student
 from src.api.schemas.messaging import (
     CreateThreadRequest,
     MessageResponse,
@@ -239,15 +240,17 @@ async def list_threads(
     Tutors see threads they created
     Students see threads they're part of
 
-    If user_id is provided, use that user (for frontend compatibility)
+    If user_id is provided, it must be authorized via
+    assert_can_access_student (self, admin, or tutor-of-student).
     Otherwise, use the authenticated user from JWT token
     """
-    # Support user_id query parameter for frontend compatibility
     if user_id:
         try:
-            db_user = db.query(User).filter(User.id == UUID(user_id)).first()
+            user_uuid = UUID(user_id)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid user_id format")
+        assert_can_access_student(db, current_user, user_uuid)
+        db_user = db.query(User).filter(User.id == user_uuid).first()
     else:
         # Use authenticated user from JWT token
         user_sub = current_user.get("sub")

@@ -12,11 +12,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session as DBSession
 
 from src.api.middleware.auth import get_current_user, get_current_user_optional
+from src.api.middleware.authz import assert_can_access_student
 from src.api.schemas.summaries import CreateSummaryRequest, SummaryResponse
 from src.config.database import get_db
 from src.models.session import Session as SessionModel
 from src.models.summary import Summary
-from src.models.user import User
 from src.services.ai.summarizer import SessionSummarizer
 from src.services.goals.progress import GoalProgressService
 
@@ -114,11 +114,7 @@ async def get_summaries(
     Get all summaries for a user (student or tutor view)
     """
     # Verify user has access
-    user_sub = current_user.get("sub")
-    db_user = db.query(User).filter(User.cognito_sub == user_sub).first()
-
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
+    db_user = assert_can_access_student(db, current_user, user_id)
 
     # Get summaries
     query = db.query(Summary).filter(Summary.student_id == user_id)

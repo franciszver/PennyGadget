@@ -11,6 +11,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy.orm import Session as DBSession
 
 from src.api.middleware.auth import get_current_user, require_role
+from src.api.middleware.authz import assert_can_access_student
 from src.config.database import get_db
 from src.config.settings import settings
 from src.models.user import User
@@ -91,6 +92,8 @@ async def get_conversation_context(
 
     Includes recent interactions and topics discussed
     """
+    assert_can_access_student(db, current_user, student_id)
+
     conversation_history = ConversationHistory(db)
 
     context = conversation_history.get_conversation_context(

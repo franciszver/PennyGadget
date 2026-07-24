@@ -30,7 +30,8 @@ router = APIRouter(prefix="/dashboards", tags=["dashboards"])
 async def get_parent_dashboard(
     student_id: UUID,
     db: DBSession = Depends(get_db),
-    current_user: dict = Depends(require_role(["parent", "admin"])),
+    # Locked to admin until a parent<->student linkage model exists (#60).
+    current_user: dict = Depends(require_role(["admin"])),
 ):
     """
     Get parent dashboard for a specific student
@@ -117,7 +118,8 @@ async def get_parent_dashboard(
 @router.get("/parent/students")
 async def get_parent_students(
     db: DBSession = Depends(get_db),
-    current_user: dict = Depends(require_role(["parent", "admin"])),
+    # Locked to admin until a parent<->student linkage model exists (#60).
+    current_user: dict = Depends(require_role(["admin"])),
 ):
     """
     Get list of students for parent
