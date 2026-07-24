@@ -7,6 +7,9 @@
 [![API](https://img.shields.io/badge/API-64%20endpoints-blue)]()
 [![Version](https://img.shields.io/badge/version-1.0.0-orange)]()
 
+![ElevareAI demo](docs/assets/demo.gif)
+*A quick tour: sign in, dashboard, AI Q&A with math rendering, adaptive practice, goals, and progress.*
+
 ---
 
 ## ✨ What You Can Do with ElevareAI
