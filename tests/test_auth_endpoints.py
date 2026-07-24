@@ -119,6 +119,30 @@ class TestRegister:
         )
         assert resp.status_code == 422
 
+    def test_register_rejects_tutor_role(self, client):
+        # #60: tutor accounts are admin-provisioned, not self-registered.
+        resp = client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "wannabetutor@example.com",
+                "password": "password123",
+                "role": "tutor",
+            },
+        )
+        assert resp.status_code == 422
+
+    def test_register_rejects_parent_role(self, client):
+        # #60: parent accounts are admin-provisioned, not self-registered.
+        resp = client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "wannabeparent@example.com",
+                "password": "password123",
+                "role": "parent",
+            },
+        )
+        assert resp.status_code == 422
+
 
 class TestLogin:
     def test_login_happy_path(self, client, db_session):

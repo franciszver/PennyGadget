@@ -13,6 +13,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     Numeric,
+    PrimaryKeyConstraint,
     String,
     Text,
 )
@@ -251,6 +252,37 @@ class TestGoal(TestBase, TimestampMixin):
 
     student = relationship("TestUser", foreign_keys=[student_id], backref="goals")
     subject = relationship("TestSubject", backref="goals")
+
+
+class TestTutorStudentAssignment(TestBase):
+    """Test version of TutorStudentAssignment model"""
+
+    __tablename__ = "tutor_student_assignments"
+
+    tutor_id = Column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    student_id = Column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    subject_id = Column(String(36), ForeignKey("subjects.id"), nullable=True)
+    assigned_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    status = Column(String(20), default="active")
+    notes = Column(Text)
+    start_date = Column(DateTime, nullable=True)
+    end_date = Column(DateTime, nullable=True)
+
+    __table_args__ = (PrimaryKeyConstraint("tutor_id", "student_id", "subject_id"),)
+
+    tutor = relationship(
+        "TestUser", foreign_keys=[tutor_id], backref="tutor_assignments"
+    )
+    student = relationship(
+        "TestUser", foreign_keys=[student_id], backref="student_assignments"
+    )
+    subject = relationship("TestSubject", backref="tutor_student_assignments")
 
 
 class TestStudentRating(TestBase):
