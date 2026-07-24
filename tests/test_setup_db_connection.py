@@ -48,10 +48,15 @@ def test_normalizes_postgres_scheme_to_postgresql(monkeypatch):
 def test_falls_back_to_db_star_when_database_url_unset(monkeypatch):
     """With DATABASE_URL unset, existing DB_*-composed behavior is preserved."""
     monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setenv("DB_HOST", "testhost")
+    monkeypatch.setenv("DB_PORT", "5433")
+    monkeypatch.setenv("DB_NAME", "testdb")
+    monkeypatch.setenv("DB_USER", "testuser")
+    monkeypatch.setenv("DB_PASSWORD", "testpass")
 
     result = get_db_connection_string()
 
-    assert result == "postgresql://postgres:@localhost:5432/elevareai"
+    assert result == "postgresql://testuser:testpass@testhost:5433/testdb"
 
 
 def test_psycopg2_params_from_url_carries_sslmode_and_channel_binding():
