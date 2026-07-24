@@ -59,7 +59,7 @@ class CompletePracticeRequest(BaseModel):
 class AsyncPracticeRequest(BaseModel):
     """Request body for async practice assignment"""
 
-    student_id: str
+    student_id: UUID
     subject: str
     topic: Optional[str] = None
     num_items: int = 5
@@ -91,7 +91,7 @@ async def assign_practice_async(
 
     # Create job
     job = job_service.create_job(
-        student_id=request.student_id,
+        student_id=str(request.student_id),
         subject=request.subject,
         topic=request.topic,
         num_items=request.num_items,
@@ -114,7 +114,7 @@ async def assign_practice_async(
 
 @router.post("/assign")
 async def assign_practice(
-    student_id: str,
+    student_id: UUID,
     subject: str,
     topic: Optional[str] = None,
     num_items: int = 5,
@@ -155,7 +155,7 @@ async def assign_practice(
             )
 
     # Get student
-    student = db.query(User).filter(User.id == uuid.UUID(student_id)).first()
+    student = db.query(User).filter(User.id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
@@ -164,7 +164,7 @@ async def assign_practice(
 
     # Get student rating for this subject
     student_rating = adaptive_service.get_student_rating(
-        student_id, str(subject_obj.id)
+        str(student_id), str(subject_obj.id)
     )
 
     # Select difficulty range
@@ -176,7 +176,7 @@ async def assign_practice(
     # Only fetch the fields we need for efficiency
     previous_assignments = (
         db.query(PracticeAssignment.bank_item_id, PracticeAssignment.ai_question_text)
-        .filter(PracticeAssignment.student_id == uuid.UUID(student_id))
+        .filter(PracticeAssignment.student_id == student_id)
         .all()
     )
 
@@ -275,7 +275,7 @@ async def assign_practice(
             break
         assignment = PracticeAssignment(
             id=uuid.uuid4(),
-            student_id=uuid.UUID(student_id),
+            student_id=student_id,
             source="bank",
             bank_item_id=bank_item.id,
             subject_id=subject_obj.id,
@@ -353,7 +353,7 @@ async def assign_practice(
 
             assignment = PracticeAssignment(
                 id=uuid.uuid4(),
-                student_id=uuid.UUID(student_id),
+                student_id=student_id,
                 source="ai_generated",
                 ai_question_text=ai_item_data["question_text"],
                 ai_answer_text=ai_item_data["answer_text"],
@@ -433,7 +433,7 @@ async def complete_practice(
     assignment_id: str = Query(
         ..., description="Practice assignment ID (for compatibility)"
     ),
-    item_id: str = Query(
+    item_id: UUID = Query(
         ..., description="Practice item ID (actual PracticeAssignment.id)"
     ),
     request: CompletePracticeRequest = ...,
@@ -449,16 +449,8 @@ async def complete_practice(
     assignment_id is kept for API compatibility but item_id is used for lookup.
     """
     # Get assignment - use item_id as it's the actual PracticeAssignment.id
-    try:
-        item_uuid = uuid.UUID(item_id)
-    except (ValueError, TypeError):
-        raise HTTPException(
-            status_code=404,
-            detail=f"Practice assignment not found with item_id: {item_id}",
-        )
-
     assignment = (
-        db.query(PracticeAssignment).filter(PracticeAssignment.id == item_uuid).first()
+        db.query(PracticeAssignment).filter(PracticeAssignment.id == item_id).first()
     )
 
     if not assignment:
@@ -554,7 +546,7 @@ async def complete_practice(
 @router.post("/summary")
 async def get_practice_summary(
     assignment_id: str = Query(..., description="Practice assignment ID"),
-    student_id: str = Query(..., description="Student ID"),
+    student_id: UUID = Query(..., description="Student ID"),
     db: DBSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
@@ -580,7 +572,7 @@ async def get_practice_summary(
     assignments = (
         db.query(PracticeAssignment)
         .filter(
-            PracticeAssignment.student_id == uuid.UUID(student_id),
+            PracticeAssignment.student_id == student_id,
             PracticeAssignment.assigned_at >= cutoff_time,
         )
         .all()

@@ -87,7 +87,7 @@ class TestPracticeAssignAuthz:
         )
         assert resp.status_code == 403
 
-    def test_malformed_student_id_returns_403(self, client, db_session):
+    def test_malformed_student_id_returns_422(self, client, db_session):
         subject = _create_subject(db_session)
         owner, owner_headers, attacker, attacker_headers = make_authed_pair(db_session)
         resp = client.post(
@@ -95,7 +95,7 @@ class TestPracticeAssignAuthz:
             f"&subject={subject.name}&num_items=0",
             headers=owner_headers,
         )
-        assert resp.status_code == 403
+        assert resp.status_code == 422
 
     def test_owner_returns_2xx(self, client, db_session):
         subject = _create_subject(db_session)

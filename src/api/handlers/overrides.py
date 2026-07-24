@@ -25,9 +25,9 @@ router = APIRouter(prefix="/overrides", tags=["overrides"])
 
 class OverrideRequest(BaseModel):
     tutor_id: str
-    student_id: str
+    student_id: UUID
     override_type: str  # "summary" | "practice" | "qa_answer"
-    target_id: str  # ID of item being overridden
+    target_id: UUID  # ID of item being overridden
     action: str
     new_content: Dict[str, Any]
     reason: Optional[str] = None
@@ -58,9 +58,7 @@ async def create_override(
     difficulty_level = None
 
     if request.override_type == "summary":
-        summary = (
-            db.query(Summary).filter(Summary.id == uuid.UUID(request.target_id)).first()
-        )
+        summary = db.query(Summary).filter(Summary.id == request.target_id).first()
         if not summary:
             raise HTTPException(status_code=404, detail="Summary not found")
         # The target must belong to the authorized student; otherwise a tutor
@@ -84,7 +82,7 @@ async def create_override(
     elif request.override_type == "practice":
         practice = (
             db.query(PracticeAssignment)
-            .filter(PracticeAssignment.id == uuid.UUID(request.target_id))
+            .filter(PracticeAssignment.id == request.target_id)
             .first()
         )
         if not practice:
@@ -113,7 +111,7 @@ async def create_override(
     override = Override(
         id=uuid.uuid4(),
         tutor_id=db_user.id,
-        student_id=uuid.UUID(request.student_id),
+        student_id=request.student_id,
         override_type=request.override_type,
         action=request.action,
         summary_id=summary_id,
@@ -142,7 +140,7 @@ async def create_override(
         "data": {
             "override_id": str(override.id),
             "tutor_id": str(override.tutor_id),
-            "student_id": request.student_id,
+            "student_id": str(request.student_id),
             "override_type": request.override_type,
             "action": request.action,
             "dashboard_updated": True,

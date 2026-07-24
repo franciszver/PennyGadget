@@ -142,6 +142,29 @@ class TestCreateOverrideAuthz:
         assert body["data"]["tutor_id"] == str(uuid.UUID(tutor.id))
         assert body["data"]["tutor_id"] != str(uuid.UUID(other_tutor.id))
 
+    def test_malformed_target_id_returns_422(self, client, db_session):
+        tutor = create_user(db_session, "tutor-malformed@example.com", role="tutor")
+        student = create_user(
+            db_session, "student-malformed@example.com", role="student"
+        )
+        _assign(db_session, tutor, student)
+        token = token_for(tutor)
+
+        resp = client.post(
+            "/api/v1/overrides/",
+            json={
+                "tutor_id": tutor.id,
+                "student_id": student.id,
+                "override_type": "practice",
+                "target_id": "not-a-uuid",
+                "action": "edit",
+                "new_content": {"question": "hacked"},
+            },
+            headers=auth_headers(token),
+        )
+
+        assert resp.status_code == 422
+
 
 class TestGetOverridesAuthz:
     def test_unrelated_tutor_returns_403(self, client, db_session):
