@@ -26,7 +26,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session as DBSession
 from starlette.concurrency import run_in_threadpool
 
-from src.api.middleware.auth import get_current_user_optional
+from src.api.middleware.auth import get_current_user, get_current_user_optional
+from src.api.middleware.authz import assert_can_access_student
 from src.config.database import get_db
 from src.models.job import Job, JobStatus
 from src.models.practice import PracticeAssignment, PracticeBankItem, StudentRating
@@ -117,13 +118,15 @@ async def assign_practice(
     num_items: int = 5,
     goal_tags: Optional[list[str]] = None,
     db: DBSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user_optional),
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Assign adaptive practice items to a student
 
     Called by Rails app or React frontend
     """
+    assert_can_access_student(db, current_user, student_id)
+
     # Get subject - handle case-insensitive and suggest similar subjects if not found
     subject_obj = (
         db.query(Subject)
@@ -150,7 +153,7 @@ async def assign_practice(
             )
 
     # Get student
-    student = db.query(User).filter(User.id == student_id).first()
+    student = db.query(User).filter(User.id == uuid.UUID(student_id)).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
@@ -171,7 +174,7 @@ async def assign_practice(
     # Only fetch the fields we need for efficiency
     previous_assignments = (
         db.query(PracticeAssignment.bank_item_id, PracticeAssignment.ai_question_text)
-        .filter(PracticeAssignment.student_id == student_id)
+        .filter(PracticeAssignment.student_id == uuid.UUID(student_id))
         .all()
     )
 
@@ -433,7 +436,7 @@ async def complete_practice(
     ),
     request: CompletePracticeRequest = ...,
     db: DBSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user_optional),
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Record completion of a practice item
@@ -444,8 +447,15 @@ async def complete_practice(
     assignment_id is kept for API compatibility but item_id is used for lookup.
     """
     # Get assignment - use item_id as it's the actual PracticeAssignment.id
+    try:
+        item_uuid = uuid.UUID(item_id)
+    except (ValueError, TypeError):
+        item_uuid = None
+
     assignment = (
-        db.query(PracticeAssignment).filter(PracticeAssignment.id == item_id).first()
+        db.query(PracticeAssignment).filter(PracticeAssignment.id == item_uuid).first()
+        if item_uuid
+        else None
     )
 
     if not assignment:
@@ -453,6 +463,8 @@ async def complete_practice(
             status_code=404,
             detail=f"Practice assignment not found with item_id: {item_id}",
         )
+
+    assert_can_access_student(db, current_user, assignment.student_id)
 
     # Initialize adaptive service
     adaptive_service = AdaptivePracticeService(db)
@@ -541,7 +553,7 @@ async def get_practice_summary(
     assignment_id: str = Query(..., description="Practice assignment ID"),
     student_id: str = Query(..., description="Student ID"),
     db: DBSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user_optional),
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Get summary of practice session and determine if tutor notification is needed
@@ -552,6 +564,8 @@ async def get_practice_summary(
     - Average attempts
     - Whether tutor help is needed
     """
+    assert_can_access_student(db, current_user, student_id)
+
     from sqlalchemy import func
 
     # Get all assignments for this assignment_id (all items in the session)
@@ -563,7 +577,7 @@ async def get_practice_summary(
     assignments = (
         db.query(PracticeAssignment)
         .filter(
-            PracticeAssignment.student_id == student_id,
+            PracticeAssignment.student_id == uuid.UUID(student_id),
             PracticeAssignment.assigned_at >= cutoff_time,
         )
         .all()

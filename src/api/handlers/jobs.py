@@ -12,9 +12,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session as DBSession
 
-from src.api.middleware.auth import get_current_user_optional
+from src.api.middleware.auth import get_current_user
+from src.api.middleware.authz import assert_can_access_student
 from src.config.database import get_db
 from src.models.job import Job, JobStatus
+from src.services.auth import InvalidTokenError, decode_token
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +30,7 @@ active_connections: dict[UUID, list[WebSocket]] = {}
 async def get_job_status(
     job_id: UUID,
     db: DBSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user_optional),
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Get job status by ID
@@ -40,6 +42,8 @@ async def get_job_status(
 
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+
+    assert_can_access_student(db, current_user, job.student_id or job.user_id)
 
     response = {
         "job_id": str(job.id),
@@ -68,6 +72,36 @@ async def websocket_job_updates(websocket: WebSocket, job_id: UUID):
     Automatically disconnects when job completes or fails.
     """
     await websocket.accept()
+
+    # Authenticate on connect: token is passed as a query param since
+    # WebSocket handshakes can't carry an Authorization header from browsers.
+    from src.config.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        token = websocket.query_params.get("token")
+        if not token:
+            await websocket.close(code=1008)
+            return
+
+        try:
+            current_user = decode_token(token)
+        except InvalidTokenError:
+            await websocket.close(code=1008)
+            return
+
+        job = db.query(Job).filter(Job.id == job_id).first()
+        if not job:
+            await websocket.close(code=1008)
+            return
+
+        try:
+            assert_can_access_student(db, current_user, job.student_id or job.user_id)
+        except HTTPException:
+            await websocket.close(code=1008)
+            return
+    finally:
+        db.close()
 
     # Add to active connections
     if job_id not in active_connections:
