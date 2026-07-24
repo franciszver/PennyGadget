@@ -11,15 +11,15 @@ from src.config.settings import settings
 DEMO_PASSWORD = settings.demo_password
 
 
-def login(
-    email: str, password: str = None, base_url: str = "http://localhost:8000"
-) -> dict:
+def login(email: str, password: str = None, base_url: str = "http://localhost:8000") -> dict:
     """Log in a demo account and return the login response
     (access_token, user_id, email, role)."""
     if password is None:
         password = settings.demo_password
     if not password:
-        raise SystemExit("DEMO_PASSWORD not set — add it to .env (see README)")
+        raise SystemExit(
+            "DEMO_PASSWORD not set — add it to .env (see README)"
+        )
     response = requests.post(
         f"{base_url}/api/v1/auth/login",
         json={"email": email, "password": password},
