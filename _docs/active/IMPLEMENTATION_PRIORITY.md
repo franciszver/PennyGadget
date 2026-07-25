@@ -267,29 +267,29 @@ def calculate_performance(answer, correct_answer, time_taken, hints_used):
 
 ---
 
-### 🟢 **PRIORITY 9: Rails/React Integration Points**
-**Question #2: Separate Service Integrating with Rails App**
+### 🟢 **PRIORITY 9: React Integration Points**
+**Question #2: Separate Service, React as the Real Caller (Rails is Aspirational, Not Implemented)**
 
-**Decision:** RESTful API with clear contracts
+**Decision:** RESTful API with clear contracts. The React frontend is the actual, implemented caller. A Rails app was planned early on but never built — there is no Rails app in this codebase.
 
 **Reasoning:**
 - **Separation of Concerns:** Microservice architecture
 - **Technology Flexibility:** Can use Python/Node.js for AI features
-- **Scalability:** Independent scaling of AI service vs Rails app
+- **Scalability:** Independent scaling of AI service vs any future caller
 
 **API Contract Design:**
 ```
-POST /api/v1/transcripts          # Rails → AI Service (session complete)
-GET  /api/v1/summaries/:user_id   # Rails → AI Service (fetch summaries)
-POST /api/v1/practice/assign      # Rails → AI Service (request practice)
+POST /api/v1/transcripts          # React → AI Service (session complete)
+GET  /api/v1/summaries/:user_id   # React → AI Service (fetch summaries)
+POST /api/v1/practice/assign      # React → AI Service (request practice)
 POST /api/v1/qa/query             # React → AI Service (student query)
 GET  /api/v1/progress/:user_id    # React → AI Service (dashboard)
-POST /api/v1/overrides            # Rails → AI Service (tutor override)
+POST /api/v1/overrides            # React → AI Service (tutor override)
 ```
 
 **Authentication:**
-- API keys for service-to-service (Rails → AI Service)
-- JWT tokens for user-facing requests (React → AI Service)
+- JWT tokens for user-facing requests (React → AI Service) — this is what's implemented.
+- Service-to-service (e.g. a future Rails caller): not implemented. If built later, it must use a scoped identity that still passes the object-ownership check (#67/#68), not a shared static API key.
 
 ---
 

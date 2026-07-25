@@ -14,20 +14,20 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session as DBSession
 
 from src.api.middleware.auth import get_current_user, require_role
+from src.api.middleware.authz import _normalize_uuid, assert_can_access_student
 from src.config.database import get_db
 from src.models.override import Override
 from src.models.practice import PracticeAssignment
 from src.models.summary import Summary
-from src.models.user import User
 
 router = APIRouter(prefix="/overrides", tags=["overrides"])
 
 
 class OverrideRequest(BaseModel):
     tutor_id: str
-    student_id: str
+    student_id: UUID
     override_type: str  # "summary" | "practice" | "qa_answer"
-    target_id: str  # ID of item being overridden
+    target_id: UUID  # ID of item being overridden
     action: str
     new_content: Dict[str, Any]
     reason: Optional[str] = None
@@ -44,10 +44,10 @@ async def create_override(
 
     Called by Rails app when tutor overrides AI
     """
-    # Verify tutor
-    tutor = db.query(User).filter(User.id == request.tutor_id).first()
-    if not tutor or tutor.role not in ["tutor", "admin"]:
-        raise HTTPException(status_code=403, detail="Only tutors can create overrides")
+    # Caller must be the student's assigned tutor (or admin) - the
+    # authenticated caller's id, not the body-supplied tutor_id, is what
+    # gets persisted below.
+    db_user = assert_can_access_student(db, current_user, request.student_id)
 
     # Get the item being overridden
     original_content = {}
@@ -61,6 +61,10 @@ async def create_override(
         summary = db.query(Summary).filter(Summary.id == request.target_id).first()
         if not summary:
             raise HTTPException(status_code=404, detail="Summary not found")
+        # The target must belong to the authorized student; otherwise a tutor
+        # assigned to student A could edit student B's summary via target_id.
+        if _normalize_uuid(summary.student_id) != _normalize_uuid(request.student_id):
+            raise HTTPException(status_code=403, detail="Access denied")
         original_content = {
             "next_steps": summary.next_steps,
             "narrative": summary.narrative,
@@ -83,6 +87,9 @@ async def create_override(
         )
         if not practice:
             raise HTTPException(status_code=404, detail="Practice assignment not found")
+        # The target must belong to the authorized student (see above).
+        if _normalize_uuid(practice.student_id) != _normalize_uuid(request.student_id):
+            raise HTTPException(status_code=403, detail="Access denied")
         original_content = {
             "question": practice.ai_question_text
             or (practice.bank_item.question_text if practice.bank_item else ""),
@@ -103,8 +110,8 @@ async def create_override(
     # Create override record
     override = Override(
         id=uuid.uuid4(),
-        tutor_id=uuid.UUID(request.tutor_id),
-        student_id=uuid.UUID(request.student_id),
+        tutor_id=db_user.id,
+        student_id=request.student_id,
         override_type=request.override_type,
         action=request.action,
         summary_id=summary_id,
@@ -132,8 +139,8 @@ async def create_override(
         "success": True,
         "data": {
             "override_id": str(override.id),
-            "tutor_id": request.tutor_id,
-            "student_id": request.student_id,
+            "tutor_id": str(override.tutor_id),
+            "student_id": str(request.student_id),
             "override_type": request.override_type,
             "action": request.action,
             "dashboard_updated": True,
@@ -153,6 +160,8 @@ async def get_overrides(
     """
     Get all overrides for a student (tutor view)
     """
+    assert_can_access_student(db, current_user, student_id)
+
     overrides = (
         db.query(Override)
         .filter(Override.student_id == student_id)

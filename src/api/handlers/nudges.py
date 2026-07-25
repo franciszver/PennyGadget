@@ -14,7 +14,8 @@ from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session as DBSession
 
-from src.api.middleware.auth import get_current_user_optional
+from src.api.middleware.auth import get_current_user
+from src.api.middleware.authz import assert_can_access_student
 from src.config.database import get_db
 from src.models.nudge import Nudge
 from src.models.user import User
@@ -38,13 +39,15 @@ class NudgeEngageRequest(BaseModel):
 async def check_nudge(
     request: NudgeCheckRequest,
     db: DBSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user_optional),
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Check if a student should receive a nudge
 
     Called by scheduled job or on login
     """
+    assert_can_access_student(db, current_user, request.student_id)
+
     engine = NudgeEngine(db)
     result = engine.should_send_nudge(request.student_id, request.check_type)
 
@@ -127,7 +130,7 @@ async def check_nudge(
 async def get_user_nudges(
     user_id: UUID,
     db: DBSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user_optional),
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Get active nudges for a user
@@ -135,6 +138,8 @@ async def get_user_nudges(
     Called by React frontend on login/dashboard load
     Returns nudges that haven't been dismissed and are still relevant
     """
+    assert_can_access_student(db, current_user, user_id)
+
     from datetime import timedelta
 
     # Get recent nudges (last 7 days) that haven't been opened yet
@@ -300,7 +305,7 @@ async def track_nudge_engagement(
     nudge_id: UUID,
     request: NudgeEngageRequest,
     db: DBSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user_optional),
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Track nudge engagement (opened/clicked)
@@ -310,6 +315,8 @@ async def track_nudge_engagement(
     nudge = db.query(Nudge).filter(Nudge.id == nudge_id).first()
     if not nudge:
         raise HTTPException(status_code=404, detail="Nudge not found")
+
+    assert_can_access_student(db, current_user, nudge.user_id)
 
     if request.engagement_type == "opened" and not nudge.opened_at:
         nudge.opened_at = datetime.now(timezone.utc)

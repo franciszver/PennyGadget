@@ -308,7 +308,6 @@ ELO_MIN_RATING=400
 ELO_MAX_RATING=2000
 
 # External Services (Optional)
-RAILS_APP_URL=https://your-rails-app.com
 WEBHOOK_SECRET=your-webhook-secret
 ```
 
@@ -411,23 +410,14 @@ python run_server.py
 
 ### Authentication
 
-The API supports two authentication methods:
-
-1. **User Authentication (self-hosted JWT)**
-   - Required for user-facing endpoints
-   - Include the token in the Authorization header:
-   ```
-   Authorization: Bearer <your-jwt-token>
-   ```
-
-2. **Service-to-Service Authentication (API Key)**
-   - Required for service-to-service calls
-   - Include the API key in the X-API-Key header:
-   ```
-   X-API-Key: <your-api-key>
-   ```
+All endpoints use self-hosted JWT authentication. Include the token in the Authorization header:
+```
+Authorization: Bearer <your-jwt-token>
+```
 
 **Note:** Health check endpoints (`/`, `/health`) do not require authentication.
+
+There is no `X-API-Key` service-to-service auth in this codebase — it was documented but never implemented. If a service-to-service integration (e.g. a future Rails caller) is built later, it must use a scoped identity that still passes the object-ownership check (see `_docs/active/API_CONTRACTS.md`).
 
 ### Error Handling
 

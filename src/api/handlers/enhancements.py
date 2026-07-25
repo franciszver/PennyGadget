@@ -11,6 +11,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy.orm import Session as DBSession
 
 from src.api.middleware.auth import get_current_user, require_role
+from src.api.middleware.authz import assert_can_access_student
 from src.config.database import get_db
 from src.config.settings import settings
 from src.models.user import User
@@ -35,33 +36,11 @@ async def get_conversation_history(
 
     Returns recent Q&A interactions for context
 
-    Security: Students can only access their own history. Tutors/admins can access any student's history.
+    Security: Students can only access their own history. Tutors can access
+    only their assigned students' history. Admins can access any student's
+    history.
     """
-    from uuid import UUID
-
-    # Get authenticated user from database
-    user_sub = current_user.get("sub")
-    db_user = db.query(User).filter(User.cognito_sub == user_sub).first()
-
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    # Verify student_id exists
-    target_student = db.query(User).filter(User.id == UUID(student_id)).first()
-    if not target_student:
-        raise HTTPException(status_code=404, detail="Student not found")
-
-    # Authorization check: Students can only access their own history
-    # Tutors and admins can access any student's history
-    user_role = db_user.role
-    if user_role == "student":
-        # Student can only access their own history
-        if str(db_user.id) != student_id:
-            raise HTTPException(
-                status_code=403,
-                detail="Access denied: You can only view your own conversation history",
-            )
-    # Tutors and admins can access any student's history (for support purposes)
+    assert_can_access_student(db, current_user, student_id)
 
     conversation_history = ConversationHistory(db)
 
@@ -91,6 +70,8 @@ async def get_conversation_context(
 
     Includes recent interactions and topics discussed
     """
+    assert_can_access_student(db, current_user, student_id)
+
     conversation_history = ConversationHistory(db)
 
     context = conversation_history.get_conversation_context(

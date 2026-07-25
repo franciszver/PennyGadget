@@ -26,7 +26,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session as DBSession
 from starlette.concurrency import run_in_threadpool
 
-from src.api.middleware.auth import get_current_user_optional
+from src.api.middleware.auth import get_current_user
+from src.api.middleware.authz import assert_can_access_student
 from src.config.database import get_db
 from src.models.job import Job, JobStatus
 from src.models.practice import PracticeAssignment, PracticeBankItem, StudentRating
@@ -58,7 +59,7 @@ class CompletePracticeRequest(BaseModel):
 class AsyncPracticeRequest(BaseModel):
     """Request body for async practice assignment"""
 
-    student_id: str
+    student_id: UUID
     subject: str
     topic: Optional[str] = None
     num_items: int = 5
@@ -73,7 +74,7 @@ async def assign_practice_async(
     request: AsyncPracticeRequest,
     background_tasks: BackgroundTasks,
     db: DBSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user_optional),
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Assign practice items asynchronously (returns immediately with job ID)
@@ -84,11 +85,13 @@ async def assign_practice_async(
     - Connect via WebSocket to /api/v1/jobs/{job_id}/ws for real-time updates
     - Provide a webhook_url to receive completion notification
     """
+    assert_can_access_student(db, current_user, request.student_id)
+
     job_service = PracticeJobService(db)
 
     # Create job
     job = job_service.create_job(
-        student_id=request.student_id,
+        student_id=str(request.student_id),
         subject=request.subject,
         topic=request.topic,
         num_items=request.num_items,
@@ -111,19 +114,21 @@ async def assign_practice_async(
 
 @router.post("/assign")
 async def assign_practice(
-    student_id: str,
+    student_id: UUID,
     subject: str,
     topic: Optional[str] = None,
     num_items: int = 5,
     goal_tags: Optional[list[str]] = None,
     db: DBSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user_optional),
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Assign adaptive practice items to a student
 
     Called by Rails app or React frontend
     """
+    assert_can_access_student(db, current_user, student_id)
+
     # Get subject - handle case-insensitive and suggest similar subjects if not found
     subject_obj = (
         db.query(Subject)
@@ -159,7 +164,7 @@ async def assign_practice(
 
     # Get student rating for this subject
     student_rating = adaptive_service.get_student_rating(
-        student_id, str(subject_obj.id)
+        str(student_id), str(subject_obj.id)
     )
 
     # Select difficulty range
@@ -270,7 +275,7 @@ async def assign_practice(
             break
         assignment = PracticeAssignment(
             id=uuid.uuid4(),
-            student_id=uuid.UUID(student_id),
+            student_id=student_id,
             source="bank",
             bank_item_id=bank_item.id,
             subject_id=subject_obj.id,
@@ -348,7 +353,7 @@ async def assign_practice(
 
             assignment = PracticeAssignment(
                 id=uuid.uuid4(),
-                student_id=uuid.UUID(student_id),
+                student_id=student_id,
                 source="ai_generated",
                 ai_question_text=ai_item_data["question_text"],
                 ai_answer_text=ai_item_data["answer_text"],
@@ -428,12 +433,12 @@ async def complete_practice(
     assignment_id: str = Query(
         ..., description="Practice assignment ID (for compatibility)"
     ),
-    item_id: str = Query(
+    item_id: UUID = Query(
         ..., description="Practice item ID (actual PracticeAssignment.id)"
     ),
     request: CompletePracticeRequest = ...,
     db: DBSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user_optional),
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Record completion of a practice item
@@ -453,6 +458,8 @@ async def complete_practice(
             status_code=404,
             detail=f"Practice assignment not found with item_id: {item_id}",
         )
+
+    assert_can_access_student(db, current_user, assignment.student_id)
 
     # Initialize adaptive service
     adaptive_service = AdaptivePracticeService(db)
@@ -539,9 +546,9 @@ async def complete_practice(
 @router.post("/summary")
 async def get_practice_summary(
     assignment_id: str = Query(..., description="Practice assignment ID"),
-    student_id: str = Query(..., description="Student ID"),
+    student_id: UUID = Query(..., description="Student ID"),
     db: DBSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user_optional),
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Get summary of practice session and determine if tutor notification is needed
@@ -552,6 +559,8 @@ async def get_practice_summary(
     - Average attempts
     - Whether tutor help is needed
     """
+    assert_can_access_student(db, current_user, student_id)
+
     from sqlalchemy import func
 
     # Get all assignments for this assignment_id (all items in the session)

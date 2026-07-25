@@ -19,7 +19,8 @@ from src.utils.user_creation import ensure_user_exists
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-_ALLOWED_REGISTER_ROLES = {"student", "tutor", "parent"}
+# tutor/parent accounts are admin-provisioned, not self-registered (see #60)
+_ALLOWED_REGISTER_ROLES = {"student"}
 _LOGIN_FAILED_MESSAGE = "Invalid email or password"
 
 

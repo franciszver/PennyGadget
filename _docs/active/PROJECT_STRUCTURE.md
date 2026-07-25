@@ -321,13 +321,13 @@ LOG_LEVEL=INFO
 
 ---
 
-## Integration with Rails App
+## Integration with Rails App (NOT IMPLEMENTED — aspirational, future integration only)
+
+There is no Rails app in this codebase. A Rails caller was documented from early planning but never built; the real, implemented caller is the React frontend using JWT. The snippet below is kept only as a sketch of what a future service-to-service integration might look like.
 
 ### API Contract
-The Rails app will call this service via REST API:
-
 ```ruby
-# Rails example
+# Rails example (aspirational, not implemented)
 class AIServiceClient
   BASE_URL = ENV['AI_SERVICE_URL']
   
@@ -342,8 +342,8 @@ end
 ```
 
 ### Authentication
-- Service-to-service: API keys
-- User requests: JWT tokens from Cognito
+- User requests: self-hosted JWT tokens (`Authorization: Bearer <jwt>`) — this is what's actually implemented.
+- Service-to-service: not implemented. If built later, it must use a scoped identity that still passes the object-ownership check (#67/#68), not a shared static API key.
 
 ---
 

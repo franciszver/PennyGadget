@@ -8,6 +8,7 @@ from src.models.integration import Integration, Webhook, WebhookEvent
 from src.models.messaging import Message, MessageThread
 from src.models.nudge import Nudge
 from src.models.override import Override
+from src.models.parent_student import ParentStudentAssignment
 from src.models.practice import PracticeAssignment, PracticeBankItem, StudentRating
 from src.models.qa import QAInteraction
 from src.models.session import Session
@@ -29,6 +30,7 @@ __all__ = [
     "Nudge",
     "Override",
     "TutorStudentAssignment",
+    "ParentStudentAssignment",
     "MessageThread",
     "Message",
     "Integration",

@@ -15,7 +15,9 @@ function getAuthToken() {
 }
 
 /**
- * Get API key for service-to-service requests
+ * Get API key for service-to-service requests.
+ * NOTE: The backend does not implement X-API-Key auth (documented but never
+ * built — see _docs/active/API_CONTRACTS.md). This fallback is inert.
  */
 function getApiKey() {
   return process.env.REACT_APP_API_KEY || '';
