@@ -85,6 +85,11 @@ async def websocket_job_updates(websocket: WebSocket, job_id: UUID):
             assert_can_access_student(db, current_user, job.student_id or job.user_id)
     except (InvalidTokenError, HTTPException):
         job = None
+    except Exception:
+        # Fail closed on any unexpected error (e.g. a DB error during the
+        # lookup) — never let an internal failure leave the socket hanging.
+        logger.exception("WebSocket auth failed for job %s", job_id)
+        job = None
     finally:
         db.close()
 

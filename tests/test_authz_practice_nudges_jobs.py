@@ -419,11 +419,12 @@ class TestJobsWebsocketAuthz:
 
     The handler's DB access goes through src.config.database.SessionLocal()
     directly rather than the get_db dependency, so it bypasses the client
-    fixture's SQLite dependency-override by default. The reject-path tests
-    below don't need DB access to reach a real job row (no token / wrong
-    user never gets past the auth check), so they work unmodified. The
-    accept-path test monkeypatches SessionLocal to close that gap - see its
-    docstring.
+    fixture's SQLite dependency-override by default. The no-token test never
+    reaches the DB (no token -> no job lookup). The attacker and owner tests
+    DO reach the job lookup (a valid token gets past decode), so they
+    monkeypatch SessionLocal to the in-memory test engine; otherwise the
+    handler hits the real configured DB (an empty Postgres in CI) and the
+    lookup errors.
     """
 
     def _make_job(self, db_session, student, status="pending"):
@@ -448,7 +449,11 @@ class TestJobsWebsocketAuthz:
 
         assert exc_info.value.code == 1008
 
-    def test_attacker_token_connection_is_closed(self, client, db_session):
+    def test_attacker_token_connection_is_closed(self, client, db_session, monkeypatch):
+        from tests.conftest import TestingSessionLocal
+
+        monkeypatch.setattr("src.api.handlers.jobs.SessionLocal", TestingSessionLocal)
+
         owner, owner_headers, attacker, attacker_headers = make_authed_pair(db_session)
         job = self._make_job(db_session, owner)
         attacker_token = token_for(attacker)
