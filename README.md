@@ -2,10 +2,8 @@
 
 **ElevareAI** is a comprehensive AI-powered tutoring platform that supports students between sessions with adaptive practice, conversational Q&A, personalized nudges, and progress tracking.
 
-[![Status](https://img.shields.io/badge/status-production%20ready-green)]()
-[![Tests](https://img.shields.io/badge/tests-354%20passing-brightgreen)]()
-[![API](https://img.shields.io/badge/API-64%20endpoints-blue)]()
-[![Version](https://img.shields.io/badge/version-1.0.0-orange)]()
+[![CI](https://github.com/franciszver/ElevareAI/actions/workflows/ci.yml/badge.svg)](https://github.com/franciszver/ElevareAI/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/franciszver/ElevareAI/actions/workflows/codeql.yml/badge.svg)](https://github.com/franciszver/ElevareAI/actions/workflows/codeql.yml)
 
 ![ElevareAI demo](docs/assets/demo.gif)
 *A quick tour: sign in, dashboard, AI Q&A with math rendering, adaptive practice, goals, and progress.*
@@ -136,7 +134,7 @@ docker-compose down
 - **AI/LLM**: OpenRouter (free-tier openai/gpt-oss-20b:free model)
 - **Authentication**: Self-hosted JWT (bcrypt via passlib + HS256 via python-jose)
 - **Email**: Disabled (log-only no-op; no external email provider)
-- **Testing**: Pytest (354 tests)
+- **Testing**: Pytest (CI-verified suite)
 - **Logging**: Structlog
 - **Validation**: Pydantic 2.5
 
@@ -556,7 +554,7 @@ pytest --cov=src tests/
 ```
 
 ### Test Coverage
-- **354 tests** covering all features
+- **Comprehensive automated tests** covering all features
 - Unit tests for services and models
 - Integration tests for complete workflows
 - Edge case coverage for practice, progress, and Q&A
@@ -750,7 +748,7 @@ PennyGadget/
 │       ├── logging_config.py      # Logging setup
 │       ├── metrics.py             # Metrics utilities
 │       └── cache.py               # Caching utilities
-├── tests/                          # Test suite (354 tests)
+├── tests/                          # Test suite (CI-verified)
 │   ├── test_api_endpoints.py      # API endpoint tests
 │   ├── test_models.py             # Model tests
 │   ├── test_practice_edge_cases.py # Practice edge cases
@@ -829,8 +827,8 @@ See `_docs/NEXT_STEPS.md` for detailed next steps.
 
 ## 📊 Project Statistics
 
-- **API Endpoints**: 64+ endpoints across 12 route handlers
-- **Test Coverage**: 354 tests passing
+- **API Endpoints**: 60+ REST endpoints across 14 route-handler modules
+- **Test Coverage**: CI-verified (see Actions)
 - **Services**: 20+ service modules across 8 service categories
 - **Database Models**: 15+ SQLAlchemy models
 - **Frontend Pages**: 9 complete React pages
@@ -877,7 +875,6 @@ The only requirement is to include the license and copyright notice.
 ## 🎉 Status
 
 **✅ All Features Implemented**  
-**✅ Production Ready**  
 **✅ Fully Documented**  
 **✅ Ready for Next Phase**
 
