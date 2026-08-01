@@ -52,7 +52,6 @@ python run_server.py
 
 # Option 3: Using helper script
 .\START_SERVER.ps1  # Windows
-./START_SERVER.sh   # Linux/Mac
 ```
 
 ### Frontend
@@ -262,7 +261,7 @@ pip install -r requirements.txt
 # Database Configuration
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=pennygadget
+DB_NAME=elevareai
 DB_USER=postgres
 DB_PASSWORD=your-password
 DB_POOL_SIZE=5
@@ -674,7 +673,7 @@ verified correct.
 ## 🛠️ Project Structure
 
 ```
-PennyGadget/
+ElevareAI/
 ├── src/                           # Source code
 │   ├── api/                       # FastAPI application
 │   │   ├── handlers/              # Route handlers (13 files)
